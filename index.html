@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>有休・休暇管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0f4f8;color:#1e293b;font-family:'Hiragino Sans','Noto Sans JP',system-ui,sans-serif;min-height:100vh;max-width:480px;margin:0 auto}
+
+.header{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.header-title{font-size:17px;font-weight:800;color:#0f172a}
+.header-date{font-size:11px;color:#94a3b8}
+
+.tabs{display:flex;background:#fff;border-bottom:1px solid #e2e8f0}
+.tab-btn{flex:1;padding:11px 2px;background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;font-size:11px;cursor:pointer;font-weight:500;font-family:inherit;transition:all .15s}
+.tab-btn.active{border-bottom-color:#6366f1;color:#6366f1;font-weight:700}
+
+.content{padding:14px}
+.panel{display:none}.panel.active{display:block}
+
+.summary-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.sum-box{background:#fff;border-radius:12px;padding:12px 6px;text-align:center;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.sum-label{font-size:9px;color:#94a3b8;letter-spacing:.5px;margin-bottom:4px;line-height:1.2}
+.sum-val{font-size:22px;font-weight:900}
+
+.cal-nav{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:14px;padding:12px 16px;margin-bottom:10px;border:1px solid #e2e8f0}
+.cal-nav-btn{background:transparent;border:1.5px solid #e2e8f0;color:#64748b;width:36px;height:36px;border-radius:8px;font-size:18px;cursor:pointer;line-height:1}
+.cal-nav-btn:hover{background:#f1f5f9}
+.cal-month{font-size:17px;font-weight:800;color:#0f172a}
+.cal-year{font-size:11px;color:#94a3b8;margin-left:4px}
+
+.cal-grid{background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.cal-dow span{text-align:center;padding:8px 0;font-size:10px;font-weight:700;color:#94a3b8}
+.cal-dow span:first-child{color:#ef4444}
+.cal-dow span:last-child{color:#3b82f6}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border-bottom:1px solid #f1f5f9;border-right:1px solid #f1f5f9;transition:background .1s;user-select:none;-webkit-tap-highlight-color:transparent;padding:2px}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day:active{opacity:.65}
+.cal-day.other-month{cursor:default}
+.cal-day.other-month .day-num{color:#d1d5db}
+
+.day-num{font-size:13px;font-weight:600;color:#374151;line-height:1;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.cal-day.today .day-num{background:#6366f1;color:#fff!important;font-weight:800}
+.cal-day.sun .day-num{color:#ef4444}
+.cal-day.sat .day-num{color:#3b82f6}
+
+/* Personal leave */
+.cal-day.s-paid-full{background:#fef9c3}
+.cal-day.s-paid-full .day-num{color:#92400e!important;font-weight:800}
+.cal-day.s-paid-half{background:#fff7ed}
+.cal-day.s-paid-half .day-num{color:#c2410c!important;font-weight:800}
+.cal-day.s-off{background:#f1f5f9}
+.cal-day.s-off .day-num{color:#94a3b8!important;font-weight:800}
+
+/* Company holiday via log (calendar tap) */
+.cal-day.s-company{background:#f0fdf4}
+.cal-day.s-company .day-num{color:#065f46!important;font-weight:800}
+/* Personal leave takes priority over company holiday */
+.cal-day.s-paid-full.s-company{background:#fef9c3}
+.cal-day.s-paid-half.s-company{background:#fff7ed}
+.cal-day.s-off.s-company{background:#f1f5f9}
+
+/* Auto-off: 土日祝（ログ不要・自動表示） */
+.cal-day.auto-off{background:#f8fafc}
+.cal-day.auto-off .day-num{opacity:.45}
+/* ログによる手動記録は auto-off より優先 */
+.cal-day.auto-off.s-paid-full{background:#fef9c3}
+.cal-day.auto-off.s-paid-full .day-num{opacity:1}
+.cal-day.auto-off.s-paid-half{background:#fff7ed}
+.cal-day.auto-off.s-paid-half .day-num{opacity:1}
+.cal-day.auto-off.s-off{background:#f1f5f9}
+.cal-day.auto-off.s-off .day-num{opacity:1}
+.cal-day.auto-off.s-company{background:#f0fdf4}
+.cal-day.auto-off.s-company .day-num{opacity:1}
+
+.legend{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#64748b;background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:3px 9px}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Popup */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.popup-overlay.show{display:flex}
+.popup{background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:480px;padding:22px 20px 36px;animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.popup-date{font-size:18px;font-weight:800;color:#0f172a;margin-bottom:4px}
+.popup-sub{font-size:11px;color:#94a3b8;margin-bottom:6px}
+.popup-company-badge{display:inline-block;background:#f0fdf4;color:#065f46;border:1px solid #6ee7b7;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:14px}
+.pop-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.pop-btn{padding:14px 6px;border-radius:14px;border:2px solid;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;font-family:inherit;line-height:1.4}
+.pop-btn:active{transform:scale(.94)}
+.pop-btn.selected{box-shadow:0 0 0 3px rgba(99,102,241,.4);transform:scale(1.05)}
+.pop-btn .emoji{font-size:20px;display:block;margin-bottom:4px}
+.pop-save{width:100%;padding:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px}
+.pop-clear{width:100%;padding:10px;background:transparent;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit}
+.pop-note{width:100%;padding:10px 13px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;color:#1e293b;font-size:14px;outline:none;margin-bottom:14px;font-family:inherit}
+.pop-note:focus{border-color:#6366f1}
+
+/* Cards */
+.card{background:#fff;border-radius:14px;padding:16px;border:1px solid #e2e8f0;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:9px;letter-spacing:2px;color:#94a3b8;margin-bottom:12px;text-transform:uppercase}
+.lbl{display:block;font-size:9px;letter-spacing:2px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase}
+.fi{display:block;width:100%;padding:10px 13px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;color:#1e293b;font-size:14px;margin-bottom:10px;outline:none;-webkit-appearance:none;font-family:inherit}
+.fi:focus{border-color:#6366f1;background:#fff}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
+.btn{width:100%;padding:12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:none;margin-bottom:8px;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+.btn-green{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+.btn-sec{background:#f1f5f9;border:1.5px solid #e2e8f0;color:#64748b}
+.btn-info{background:#eff6ff;border:1.5px solid #bfdbfe;color:#3b82f6;font-weight:600}
+.btn-danger{background:transparent;border:1.5px solid #fecaca;color:#ef4444}
+
+.tag{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.row:last-child{border-bottom:none}
+
+/* Holiday list item */
+.hol-item{display:flex;align-items:flex-start;padding:11px 0;border-bottom:1px solid #f1f5f9;gap:8px}
+.hol-item:last-child{border-bottom:none}
+.hol-name{font-size:13px;font-weight:700;color:#065f46}
+.hol-dates{font-size:11px;color:#94a3b8;margin-top:2px}
+.hol-del{background:transparent;border:1.5px solid #e2e8f0;color:#cbd5e1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.hol-del:hover{border-color:#fca5a5;color:#ef4444}
+
+.sub-tabs{display:flex;gap:6px;margin-bottom:14px}
+.sub-tab{flex:1;padding:9px;background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:600;color:#64748b;cursor:pointer;text-align:center;font-family:inherit;transition:all .15s}
+.sub-tab.active{background:#f5f3ff;border-color:#c4b5fd;color:#7c3aed}
+
+.toast{position:fixed;top:62px;left:50%;transform:translateX(-50%);padding:8px 18px;border-radius:20px;font-size:13px;z-index:300;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.login-btn{display:flex;align-items:center;gap:6px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit;transition:all .15s}
+.login-btn:hover{background:#f1f5f9}
+.login-btn img{width:16px;height:16px;border-radius:50%}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;margin-left:2px}
+.sync-dot.syncing{background:#f59e0b;animation:pulse 1s infinite}
+.sync-dot.offline{background:#94a3b8}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">有休・休暇管理</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="sync-dot offline" id="sync-dot"></span>
+    <button class="login-btn" id="login-btn" onclick="handleAuth()">
+      <span id="login-label">Googleでログイン</span>
+    </button>
+  </div>
+</div>
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('calendar',this)">📅 カレンダー</button>
+  <button class="tab-btn" onclick="switchTab('summary',this)">📊 集計</button>
+  <button class="tab-btn" onclick="switchTab('holidays',this)">🏢 会社休日</button>
+  <button class="tab-btn" onclick="switchTab('shift',this)">⚙️ 設定</button>
+</div>
+
+<div id="toast" class="toast" style="opacity:0"></div>
+
+<!-- POPUP -->
+<div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+  <div class="popup">
+    <div class="popup-date" id="pop-date"></div>
+    <div class="popup-sub" id="pop-sub"></div>
+    <div id="pop-company-badge" style="display:none" class="popup-company-badge">🏢 会社休日</div>
+    <div class="pop-opts" style="grid-template-columns:repeat(2,1fr)">
+      <button class="pop-btn" id="pop-paid-full" onclick="selectType('paid-full')"
+        style="background:#fef9c3;color:#92400e;border-color:#fde68a">
+        <span class="emoji">🌴</span>有休<br>全休
+      </button>
+      <button class="pop-btn" id="pop-paid-half" onclick="selectType('paid-half')"
+        style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">
+        <span class="emoji">🌗</span>有休<br>半休
+      </button>
+      <button class="pop-btn" id="pop-off" onclick="selectType('off')"
+        style="background:#f1f5f9;color:#475569;border-color:#cbd5e1">
+        <span class="emoji">😴</span>欠勤<br>公休
+      </button>
+      <button class="pop-btn" id="pop-company" onclick="selectType('company')"
+        style="background:#f0fdf4;color:#065f46;border-color:#6ee7b7">
+        <span class="emoji">🏢</span>会社<br>休日
+      </button>
+    </div>
+    <input type="text" class="pop-note" id="pop-note" placeholder="メモ（任意）">
+    <button class="pop-save" onclick="saveDay()">保存する</button>
+    <button class="pop-clear" onclick="clearDay()">この日の記録を削除（通常に戻す）</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- CALENDAR -->
+  <div id="panel-calendar" class="panel active">
+    <div class="summary-bar">
+      <div class="sum-box">
+        <div class="sum-label">有休残</div>
+        <div class="sum-val" id="s-remaining" style="color:#8b5cf6">—</div>
+      </div>
+      <div class="sum-box">
+        <div class="sum-label">使用済み</div>
+        <div class="sum-val" id="s-used" style="color:#f59e0b">—</div>
+      </div>
+      <div class="sum-box">
+        <div class="sum-label">今月の休み</div>
+        <div class="sum-val" id="s-off" style="color:#94a3b8">—</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#e2e8f0"></div>土日祝</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>有休（全）</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>有休（半）</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>欠勤・公休</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>会社休日</div>
+    </div>
+
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <div style="text-align:center">
+        <span class="cal-month" id="cal-month-label"></span>
+        <span class="cal-year" id="cal-year-label"></span>
+      </div>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+
+    <div class="cal-grid">
+      <div class="cal-dow">
+        <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+      </div>
+      <div class="cal-days" id="cal-days"></div>
+    </div>
+
+    <div style="font-size:10px;color:#94a3b8;margin-top:8px;text-align:center">タップして記録 ／ 🏢会社休日もカレンダーからタップで入力できます</div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="panel-summary" class="panel">
+    <div class="card">
+      <div class="card-title">有休サマリー</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:16px;border:1px solid #ddd6fe;text-align:center">
+          <div style="font-size:9px;color:#8b5cf6;letter-spacing:2px;margin-bottom:6px">有休残日数</div>
+          <div id="ss-remaining" style="font-size:36px;font-weight:900;color:#7c3aed">—</div>
+          <div style="font-size:11px;color:#a78bfa;margin-top:4px">/ <span id="ss-total">—</span> 日付与</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fffbeb,#fef9c3);border-radius:12px;padding:16px;border:1px solid #fde68a;text-align:center">
+          <div style="font-size:9px;color:#d97706;letter-spacing:2px;margin-bottom:6px">使用合計</div>
+          <div id="ss-used" style="font-size:36px;font-weight:900;color:#b45309">—</div>
+          <div style="font-size:11px;color:#f59e0b;margin-top:4px">日（半休×0.5）</div>
+        </div>
+      </div>
+      <div style="background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden">
+        <div id="ss-bar" style="height:8px;border-radius:6px;transition:width .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:#94a3b8">
+        <span>残 <span id="ss-r2">—</span>日</span><span>付与 <span id="ss-t2">—</span>日</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">付与履歴・繰越状況</div>
+      <div id="grant-history"></div>
+    </div>
+
+    <div class="card">
+      <div id="leave-history"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">月別 集計</div>
+      <div id="monthly-list"></div>
+    </div>
+  </div>
+
+  <!-- COMPANY HOLIDAYS -->
+  <div id="panel-holidays" class="panel">
+
+    <div class="card" style="background:#f0fdf4;border-color:#6ee7b7">
+      <div style="font-size:11px;color:#065f46;line-height:1.8">
+        🏢 <strong>会社休日の管理</strong><br>
+        お盆・年末年始・月末休みなど、会社で決まっている休日を期間で登録します。<br>
+        カレンダーに <span style="color:#10b981;font-weight:700">緑</span> で表示され、有休残には影響しません。
+      </div>
+    </div>
+
+    <!-- Sub tabs -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" id="stab-add" onclick="switchSubTab('add',this)">＋ 新規登録</button>
+      <button class="sub-tab" id="stab-list" onclick="switchSubTab('list',this)">📋 登録済み一覧</button>
+    </div>
+
+    <!-- Add form -->
+    <div id="hol-add-panel">
+      <div class="card">
+        <div class="card-title">会社休日を追加</div>
+
+        <label class="lbl">休日名</label>
+        <input type="text" class="fi" id="hol-name" placeholder="例: お盆休み、年末年始、月末休み">
+
+        <label class="lbl">種類</label>
+        <select class="fi" id="hol-type" onchange="toggleHolType()">
+          <option value="range">期間指定（〇日〜〇日）</option>
+          <option value="monthly-last">毎月末日</option>
+          <option value="monthly-day">毎月〇日</option>
+          <option value="single">単日</option>
+        </select>
+
+        <div id="hol-range-area">
+          <label class="lbl">開始日 / 終了日</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input type="date" class="fi" id="hol-start">
+            <input type="date" class="fi" id="hol-end">
+          </div>
+        </div>
+
+        <div id="hol-monthly-day-area" style="display:none">
+          <label class="lbl">毎月何日</label>
+          <input type="number" class="fi" id="hol-day-num" min="1" max="31" placeholder="例: 25">
+        </div>
+
+        <div id="hol-single-area" style="display:none">
+          <label class="lbl">日付</label>
+          <input type="date" class="fi" id="hol-single-date">
+        </div>
+
+        <label class="lbl">繰り返し（期間・単日の場合）</label>
+        <select class="fi" id="hol-repeat">
+          <option value="once">この年だけ</option>
+          <option value="yearly">毎年繰り返す</option>
+        </select>
+
+        <button class="btn btn-green" onclick="saveHoliday()">🏢 会社休日を登録</button>
+      </div>
+
+      <!-- Presets -->
+      <div class="card">
+        <div class="card-title">よく使うプリセット</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onclick="applyPreset('obon')" style="padding:10px;background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:10px;font-size:12px;font-weight:700;color:#065f46;cursor:pointer">🌿 お盆<br><span style="font-size:10px;color:#94a3b8;font-weight:400">8/13〜8/16</span></button>
+          <button onclick="applyPreset('newyear')" style="padding:10px;background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:10px;font-size:12px;font-weight:700;color:#065f46;cursor:pointer">🎍 年末年始<br><span style="font-size:10px;color:#94a3b8;font-weight:400">12/29〜1/3</span></button>
+          <button onclick="applyPreset('monthend')" style="padding:10px;background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:10px;font-size:12px;font-weight:700;color:#065f46;cursor:pointer">📅 毎月末日<br><span style="font-size:10px;color:#94a3b8;font-weight:400">毎月最終日</span></button>
+          <button onclick="applyPreset('gw')" style="padding:10px;background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:10px;font-size:12px;font-weight:700;color:#065f46;cursor:pointer">🌸 GW<br><span style="font-size:10px;color:#94a3b8;font-weight:400">5/3〜5/5</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div id="hol-list-panel" style="display:none">
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="holiday-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="panel-shift" class="panel">
+    <div class="card" style="background:#f0f9ff;border-color:#bae6fd">
+      <div style="font-size:11px;color:#0369a1;line-height:1.8;margin-bottom:2px">
+        ⚖️ <strong>労働基準法に基づいて自動計算</strong><br>
+        入社日と週の勤務日数を入力するだけで、有休付与日数・繰越・失効を自動で管理します。
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">勤務条件（有休自動計算）</div>
+
+      <label class="lbl">入社日（雇用開始日）</label>
+      <input type="date" class="fi" id="set-hire-date">
+
+      <label class="lbl">週の所定勤務日数</label>
+      <select class="fi" id="set-weekly-days">
+        <option value="5">週5日（フルタイム）</option>
+        <option value="4" selected>週4日</option>
+        <option value="3">週3日</option>
+        <option value="2">週2日</option>
+        <option value="1">週1日</option>
+      </select>
+
+      <label class="lbl">1日の所定労働時間（開始〜終了）</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <input type="time" class="fi" id="set-work-s" value="09:45" style="margin-bottom:0">
+        <input type="time" class="fi" id="set-work-e" value="15:15" style="margin-bottom:0">
+      </div>
+      <div id="set-hours-hint" style="font-size:11px;color:#6366f1;margin-bottom:12px;font-weight:600"></div>
+
+      <div id="set-law-preview" style="background:#f8fafc;border-radius:10px;padding:12px;border:1px solid #e2e8f0;margin-bottom:12px;font-size:12px;line-height:1.8;color:#475569"></div>
+
+      <button class="btn btn-primary" onclick="saveWorkConditions()">保存して有休を自動計算</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">シフトパターン登録</div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;line-height:1.6">時期ごとの標準勤務時間を登録できます（参考表示用）</div>
+      <label class="lbl">パターン名</label>
+      <input type="text" class="fi" id="p-label" placeholder="例: 2025年4月〜">
+      <label class="lbl">適用期間（開始 / 終了）</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="date" class="fi" id="p-start">
+        <input type="date" class="fi" id="p-end">
+      </div>
+      <label class="lbl">勤務時間</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="time" class="fi" id="p-s" value="09:45">
+        <input type="time" class="fi" id="p-e" value="15:15">
+      </div>
+      <button class="btn btn-sec" onclick="savePattern()" style="font-weight:700">＋ 登録</button>
+      <div id="pattern-list" style="margin-top:4px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">データ管理</div>
+      <button class="btn btn-info" onclick="exportData()">⬇ バックアップ (JSON)</button>
+      <label style="display:block;cursor:pointer;margin-bottom:8px">
+        <div class="btn btn-sec" style="text-align:center;padding:12px;display:block;margin-bottom:0">⬆ バックアップから復元</div>
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+      </label>
+      <button class="btn btn-danger" onclick="resetAll()">全データ初期化</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   Firebase 初期化 & クラウド同期
+   ══════════════════════════════════════════ */
+const FB_CONFIG = {
+  apiKey: "AIzaSyA2k1bYVflOGRsH7nAkaPXeHBsTjC_Kad4",
+  authDomain: "pantry-home-f4e36.firebaseapp.com",
+  projectId: "pantry-home-f4e36",
+  storageBucket: "pantry-home-f4e36.firebasestorage.app",
+  messagingSenderId: "884734556181",
+  appId: "1:884734556181:web:cedd85e384223ecad2361c"
+};
+
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let currentUser = null;
+let syncTimer = null;
+
+function setSyncDot(state) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot' + (state==='ok'?'':state==='syncing'?' syncing':' offline');
+}
+
+async function loadFromFirestore() {
+  if (!currentUser) return;
+  try {
+    setSyncDot('syncing');
+    const doc = await db.collection('users').doc(currentUser.uid).collection('kintai').doc('data').get();
+    if (doc.exists) {
+      const d = doc.data();
+      if (d.patterns) patterns = d.patterns;
+      if (d.logs)     logs     = d.logs;
+      if (d.settings) settings = d.settings;
+      if (d.holidays) holidays = d.holidays;
+      // ローカルにも保存
+      localStorage.setItem(MASTER_KEY, JSON.stringify({patterns,logs,settings,holidays}));
+      renderCalendar();
+      if(document.getElementById('panel-summary').classList.contains('active')) renderSummary();
+      if(settings.hireDate) document.getElementById('set-hire-date').value = settings.hireDate;
+      if(settings.weeklyDays) document.getElementById('set-weekly-days').value = settings.weeklyDays;
+    }
+    setSyncDot('ok');
+  } catch(e) { setSyncDot('offline'); }
+}
+
+async function syncToFirestore() {
+  if (!currentUser) return;
+  try {
+    setSyncDot('syncing');
+    await db.collection('users').doc(currentUser.uid).collection('kintai').doc('data').set({
+      patterns, logs, settings, holidays, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    setSyncDot('ok');
+  } catch(e) { setSyncDot('offline'); }
+}
+
+function handleAuth() {
+  if (currentUser) {
+    if (confirm('ログアウトしますか？')) auth.signOut();
+  } else {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(e => showToast('ログイン失敗: '+e.message,'err'));
+  }
+}
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  const btn   = document.getElementById('login-btn');
+  const label = document.getElementById('login-label');
+  if (user) {
+    label.innerHTML = `<img src="${user.photoURL||''}" onerror="this.style.display='none'"> ${user.displayName||user.email}`;
+    setSyncDot('ok');
+    loadFromFirestore();
+    showToast('ログインしました ✓','info');
+  } else {
+    label.textContent = 'Googleでログイン';
+    setSyncDot('offline');
+  }
+});
+
+// ── ストレージキーは永久固定（バージョンアップしてもデータが消えない） ──
+const MASTER_KEY = 'kintai_master_data';
+
+function loadAll() {
+  try {
+    const raw = localStorage.getItem(MASTER_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+
+  // 旧バージョンキーからの自動マイグレーション
+  const legacy = [
+    {p:'sp_v5',l:'wl_v5',s:'as_v5',h:'ch_v5'},
+    {p:'sp_v4',l:'wl_v4',s:'as_v4',h:'ch_v4'},
+    {p:'sp_v3',l:'wl_v3',s:'as_v3',h:null},
+    {p:'sp_v2',l:'wl_v2',s:'as_v2',h:null},
+  ];
+  for (const k of legacy) {
+    try {
+      const p=localStorage.getItem(k.p);
+      const l=localStorage.getItem(k.l);
+      const s=localStorage.getItem(k.s);
+      const h=k.h?localStorage.getItem(k.h):null;
+      if (p||l) {
+        const migrated = {
+          patterns: p?JSON.parse(p):null,
+          logs:     l?JSON.parse(l):null,
+          settings: s?JSON.parse(s):null,
+          holidays: h?JSON.parse(h):null,
+        };
+        saveAll(migrated);
+        showToast('旧データを自動引き継ぎしました ✓','info');
+        return migrated;
+      }
+    } catch(e) {}
+  }
+  return {};
+}
+
+function saveAll(data) {
+  localStorage.setItem(MASTER_KEY, JSON.stringify(data));
+}
+
+const _stored = loadAll();
+
+const TYPE={
+  'paid-full':{short:'有休(全)',dot:'🟡',color:'#92400e',bg:'#fef9c3',border:'#fde68a',val:1},
+  'paid-half':{short:'有休(半)',dot:'🟠',color:'#c2410c',bg:'#fff7ed',border:'#fed7aa',val:.5},
+  off:        {short:'欠勤・公休',dot:'⚫',color:'#475569',bg:'#f1f5f9',border:'#cbd5e1',val:0},
+  company:    {short:'会社休日', dot:'🏢', color:'#065f46',bg:'#f0fdf4',border:'#6ee7b7',val:0},
+};
+
+let patterns = _stored.patterns || [
+  {id:1,start:'2024-01-01',end:'2024-03-31',s:'10:00',e:'15:30',label:'2024年1〜3月'},
+  {id:2,start:'2024-04-01',end:'2024-09-30',s:'09:30',e:'15:00',label:'2024年4〜9月'},
+  {id:3,start:'2024-10-01',end:'2025-03-31',s:'10:00',e:'15:30',label:'2024年10月〜'},
+  {id:4,start:'2025-04-01',end:'2099-12-31',s:'09:45',e:'15:15',label:'2025年4月〜現在'},
+];
+let logs     = _stored.logs     || {};
+let settings = _stored.settings || {};
+let holidays = _stored.holidays || [];
+
+let curYear=new Date().getFullYear();
+let curMonth=new Date().getMonth()+1;
+let popDate=null,popType=null;
+
+function persist() {
+  // ローカル保存（即時）
+  localStorage.setItem(MASTER_KEY, JSON.stringify({patterns, logs, settings, holidays}));
+  // クラウド同期（500msデバウンス）
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncToFirestore(), 500);
+}
+
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function pad(n){return String(n).padStart(2,'0');}
+function dateStr(y,m,d){return`${y}-${pad(m)}-${pad(d)}`;}
+function fmt(n){return n%1===0?String(n):n.toFixed(1);}
+
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  const c={ok:{bg:'#f0fdf4',brd:'#86efac',col:'#15803d'},err:{bg:'#fff1f2',brd:'#fca5a5',col:'#dc2626'},info:{bg:'#f0fdf4',brd:'#6ee7b7',col:'#065f46'}};
+  const s=c[type]||c.ok;
+  Object.assign(t.style,{background:s.bg,border:`1px solid ${s.brd}`,color:s.col,opacity:'1'});
+  t.textContent=msg;setTimeout(()=>t.style.opacity='0',2200);
+}
+
+/* ── Company holiday resolution ── */
+function isCompanyHoliday(ds){
+  const [y,m,d]=ds.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  for(const h of holidays){
+    switch(h.type){
+      case 'range':{
+        // yearly: compare MM-DD only
+        const start=h.repeat==='yearly'?`${y}-${h.start.slice(5)}`:h.start;
+        const end=h.repeat==='yearly'?`${y}-${h.end.slice(5)}`:h.end;
+        // handle year-end wrap (e.g. 12/29 - 1/3)
+        if(h.repeat==='yearly'&&h.start.slice(5)>'12-01'&&h.end.slice(5)<'02-01'){
+          const startY=`${y}-${h.start.slice(5)}`;
+          const endNextY=`${y+1}-${h.end.slice(5)}`;
+          const startPrevY=`${y-1}-${h.start.slice(5)}`;
+          if(ds>=startY||ds<=`${y}-${h.end.slice(5)}`){
+            if(ds>=startY||ds<=endNextY&&ds>=`${y}-01-01`){/* covered below */}
+          }
+          if(ds>=startPrevY||ds<=`${y}-${h.end.slice(5)}`)
+            if(ds>=`${y}-01-01`&&ds<=`${y}-${h.end.slice(5)}`)return h;
+          if(ds>=startY)return h;
+        }
+        if(ds>=start&&ds<=end)return h;
+        break;
+      }
+      case 'monthly-last':
+        if(d===lastDay)return h;
+        break;
+      case 'monthly-day':
+        if(d===h.dayNum)return h;
+        break;
+      case 'single':{
+        const sd=h.repeat==='yearly'?`${y}-${h.date.slice(5)}`:h.date;
+        if(ds===sd)return h;
+        break;
+      }
+    }
+  }
+  return null;
+}
+
+/* ── 祝日リスト（2023〜2027） ── */
+const JP_HOLIDAYS = new Set([
+  // 2023
+  '2023-01-01','2023-01-02','2023-01-09','2023-02-11','2023-02-23','2023-03-21',
+  '2023-04-29','2023-05-03','2023-05-04','2023-05-05','2023-07-17','2023-08-11',
+  '2023-09-18','2023-09-23','2023-10-09','2023-11-03','2023-11-23',
+  // 2024
+  '2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-02-23',
+  '2024-03-20','2024-04-29','2024-05-03','2024-05-04','2024-05-05','2024-05-06',
+  '2024-07-15','2024-08-11','2024-08-12','2024-09-16','2024-09-22','2024-09-23',
+  '2024-10-14','2024-11-03','2024-11-04','2024-11-23',
+  // 2025
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13',
+  '2025-11-03','2025-11-23','2025-11-24',
+  // 2026
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-23','2026-10-12',
+  '2026-11-03','2026-11-23',
+  // 2027
+  '2027-01-01','2027-01-11','2027-02-11','2027-02-23',
+  '2027-03-21','2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+  '2027-07-19','2027-08-11','2027-09-20','2027-09-23','2027-10-11',
+  '2027-11-03','2027-11-23',
+]);
+
+function isAutoOff(ds) {
+  const dow = new Date(ds + 'T00:00:00').getDay();
+  return dow === 0 || dow === 6 || JP_HOLIDAYS.has(ds);
+}
+
+function holidayName(ds) {
+  const dow = new Date(ds + 'T00:00:00').getDay();
+  if (dow === 0) return '日曜日';
+  if (dow === 6) return '土曜日';
+  if (JP_HOLIDAYS.has(ds)) return '祝日';
+  return null;
+}
+/* 労働基準法 第39条 有休自動計算エンジン（週4日・5.5h比例付与対応） */
+
+// 付与テーブル [勤続月数, 通常, 週4日, 週3日, 週2日, 週1日]
+const LEAVE_TABLE = [
+  [6,  10, 7,  5, 3, 1],
+  [18, 11, 8,  6, 4, 2],
+  [30, 12, 9,  6, 4, 2],
+  [42, 14,10,  8, 5, 2],
+  [54, 16,12,  9, 6, 3],
+  [66, 18,13, 10, 6, 3],
+  [78, 20,15, 11, 7, 3],
+];
+
+function addMonths(dateStr, months) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0,10);
+}
+
+function diffMonths(from, to) {
+  const f = new Date(from + 'T00:00:00');
+  const t = new Date(to  + 'T00:00:00');
+  return (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth());
+}
+
+function getDaysForRow(row, weeklyDays, weeklyHours) {
+  const fullTime = weeklyDays >= 5 || weeklyHours >= 30;
+  if (fullTime)          return row[1];
+  if (weeklyDays >= 4)   return row[2];
+  if (weeklyDays >= 3)   return row[3];
+  if (weeklyDays >= 2)   return row[4];
+  return row[5];
+}
+
+function calcGrantSchedule() {
+  if (!settings.hireDate) return [];
+  const today = todayStr();
+  const wd = settings.weeklyDays || 4;
+  const wh = settings.weeklyHours || 22;
+  const grants = [];
+
+  for (let i = 0; i < LEAVE_TABLE.length; i++) {
+    const row = LEAVE_TABLE[i];
+    const grantDate = addMonths(settings.hireDate, row[0]);
+    const expireDate = addMonths(grantDate, 24);      // 2年で失効
+    const days = getDaysForRow(row, wd, wh);
+    const label = row[0] < 12
+      ? `${row[0]}ヶ月`
+      : `${row[0]/12}年${row[0]%12?row[0]%12+'ヶ月':''}`;
+    grants.push({ grantDate, expireDate, days, label, index: i });
+    if (grantDate > today && i >= 6) break;  // future max already
+    if (grantDate > addMonths(today, 24)) break; // don't look too far ahead
+  }
+  return grants;
+}
+
+function calcLeaveStats() {
+  const today = todayStr();
+
+  // 使用済み（常に計算）
+  let totalUsed = 0;
+  Object.values(logs).forEach(v => { if(TYPE[v.type]) totalUsed += TYPE[v.type].val; });
+
+  // 今月の手動記録休み
+  const cm = `${curYear}-${pad(curMonth)}`;
+  let offMonth = 0;
+  Object.entries(logs).forEach(([d,v]) => { if(d.startsWith(cm)) offMonth++; });
+
+  // hireDate未設定 → initialLeave(旧データ)にフォールバック
+  if (!settings.hireDate) {
+    const grant = settings.initialLeave ?? 10;
+    return { remaining: Math.max(0, grant - totalUsed), totalUsed, totalGranted: grant, grants: [], nextGrant: null, offMonth, pastGrants: [], noHireDate: true };
+  }
+
+  const wd = settings.weeklyDays || 4;
+  const wh = settings.weeklyHours || 22;
+  const grants = calcGrantSchedule();
+  const pastGrants = grants.filter(g => g.grantDate <= today);
+  const nonExpired = pastGrants.filter(g => g.expireDate > today);
+  let totalGranted = 0;
+  nonExpired.forEach(g => totalGranted += g.days);
+  const remaining = Math.max(0, totalGranted - totalUsed);
+  const nextGrant = grants.find(g => g.grantDate > today);
+
+  return { remaining, totalUsed, totalGranted, grants, nextGrant, offMonth, pastGrants };
+}
+
+/* ── Stats ── */
+function calcStats(){
+  const s = calcLeaveStats();
+  return { remaining: s.remaining, used: s.totalUsed, offMonth: s.offMonth };
+}
+
+function updateSummaryBar(){
+  const s=calcStats();
+  const lc=s.remaining<=2?'#ef4444':s.remaining<=5?'#f59e0b':'#8b5cf6';
+  document.getElementById('s-remaining').textContent=fmt(s.remaining);
+  document.getElementById('s-remaining').style.color=lc;
+  document.getElementById('s-used').textContent=fmt(s.used);
+  document.getElementById('s-off').textContent=s.offMonth;
+}
+
+/* ── Calendar ── */
+function renderCalendar(){
+  const mn=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('cal-month-label').textContent=mn[curMonth-1];
+  document.getElementById('cal-year-label').textContent=curYear+'年';
+
+  const first=new Date(curYear,curMonth-1,1).getDay();
+  const dim=new Date(curYear,curMonth,0).getDate();
+  const prevDim=new Date(curYear,curMonth-1,0).getDate();
+  const today=todayStr();
+  let html='';
+
+  for(let i=0;i<first;i++){
+    const d=prevDim-first+1+i;
+    const pm=curMonth===1?12:curMonth-1,py=curMonth===1?curYear-1:curYear;
+    html+=cell(dateStr(py,pm,d),d,false,today);
+  }
+  for(let d=1;d<=dim;d++) html+=cell(dateStr(curYear,curMonth,d),d,true,today);
+  const tot=first+dim,rem=tot%7===0?0:7-(tot%7);
+  for(let i=1;i<=rem;i++){
+    const nm=curMonth===12?1:curMonth+1,ny=curMonth===12?curYear+1:curYear;
+    html+=cell(dateStr(ny,nm,i),i,false,today);
+  }
+  document.getElementById('cal-days').innerHTML=html;
+  updateSummaryBar();
+}
+
+function cell(ds,d,inMonth,today){
+  const dow=new Date(ds+'T00:00:00').getDay();
+  const log=logs[ds];
+  const ch=inMonth?isCompanyHoliday(ds):null;
+  const autoOff=inMonth&&isAutoOff(ds);
+  const cls=['cal-day'];
+  if(!inMonth){cls.push('other-month');return`<div class="${cls.join(' ')}"><div class="day-num">${d}</div><div class="day-dot"></div></div>`;}
+  if(ds===today)cls.push('today');
+  if(dow===0)cls.push('sun');
+  if(dow===6)cls.push('sat');
+  if(autoOff)cls.push('auto-off');
+  if(ch)cls.push('s-company');
+  if(log)cls.push('s-'+log.type);
+  let dot='';
+  if(log)dot=TYPE[log.type].dot;
+  else if(ch)dot='🏢';
+  else if(JP_HOLIDAYS.has(ds)&&dow!==0&&dow!==6)dot='🎌'; // 平日祝日のみ旗
+  return`<div class="${cls.join(' ')}" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot">${dot}</div></div>`;
+}
+
+function changeMonth(dir){
+  curMonth+=dir;
+  if(curMonth>12){curMonth=1;curYear++;}
+  if(curMonth<1){curMonth=12;curYear--;}
+  renderCalendar();
+}
+
+/* ── Popup ── */
+function openPopup(ds){
+  popDate=ds;
+  const log=logs[ds];
+  const ch=isCompanyHoliday(ds);
+  popType=log?log.type:null;
+  const dt=new Date(ds+'T00:00:00');
+  const dows=['日','月','火','水','木','金','土'];
+  document.getElementById('pop-date').textContent=`${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日（${dows[dt.getDay()]}）`;
+  const holName = holidayName(ds);
+  document.getElementById('pop-sub').textContent = log
+    ? `現在: ${TYPE[log.type].short}`
+    : holName
+      ? `${holName}（タップで記録を追加できます）`
+      : '記録なし（通常勤務）';
+  const badge=document.getElementById('pop-company-badge');
+  if(ch){badge.textContent=`🏢 ${ch.name}`;badge.style.display='inline-block';}
+  else badge.style.display='none';
+  document.getElementById('pop-note').value=log?log.note||'':'';
+  updatePopBtns();
+  document.getElementById('popup-overlay').classList.add('show');
+}
+
+function closePopup(e){
+  if(e&&e.target!==document.getElementById('popup-overlay'))return;
+  document.getElementById('popup-overlay').classList.remove('show');
+}
+function selectType(t){popType=t;updatePopBtns();}
+function updatePopBtns(){
+  ['paid-full','paid-half','off','company'].forEach(t=>{
+    const b=document.getElementById('pop-'+t);
+    b.style.boxShadow=popType===t?'0 0 0 3px rgba(99,102,241,.4)':'none';
+    b.style.transform=popType===t?'scale(1.05)':'scale(1)';
+  });
+}
+function saveDay(){
+  if(!popType)return showToast('種別を選んでください','err');
+  logs[popDate]={type:popType,note:document.getElementById('pop-note').value};persist();
+  
+  document.getElementById('popup-overlay').classList.remove('show');
+  renderCalendar();showToast('保存しました ✓');
+}
+function clearDay(){
+  delete logs[popDate];persist();
+  document.getElementById('popup-overlay').classList.remove('show');
+  renderCalendar();showToast('削除しました');
+}
+
+/* ── Summary ── */
+function renderSummary(){
+  const ls = calcLeaveStats();
+  const lc = ls.remaining<=2?'#ef4444':ls.remaining<=5?'#f59e0b':'#7c3aed';
+  document.getElementById('ss-remaining').textContent=fmt(ls.remaining);
+  document.getElementById('ss-remaining').style.color=lc;
+  document.getElementById('ss-total').textContent=ls.totalGranted;
+  document.getElementById('ss-used').textContent=fmt(ls.totalUsed);
+  document.getElementById('ss-r2').textContent=fmt(ls.remaining);
+  document.getElementById('ss-t2').textContent=ls.totalGranted;
+  const ratio=ls.totalGranted>0?Math.max(0,Math.min(100,(ls.remaining/ls.totalGranted)*100)):0;
+  document.getElementById('ss-bar').style.cssText=`width:${ratio}%;height:8px;border-radius:6px;transition:width .5s;background:${ls.remaining<=2?'linear-gradient(90deg,#ef4444,#f97316)':ls.remaining<=5?'linear-gradient(90deg,#f59e0b,#eab308)':'linear-gradient(90deg,#8b5cf6,#6366f1)'}`;
+
+  // 次回付与バナー
+  const d1=document.getElementById('ss-total');
+  d1.textContent=ls.totalGranted+'日（付与済合計）';
+
+  // 付与履歴
+  const gh=document.getElementById('grant-history');
+  const today=todayStr();
+  if(!settings.hireDate){
+    gh.innerHTML=`<div style="background:#fffbeb;border-radius:8px;padding:12px;border:1px solid #fde68a;font-size:12px;color:#92400e;line-height:1.6">
+      ⚙️ <strong>⚙️設定タブ</strong>で入社日を入力すると、労基法に基づいた付与日数が自動計算されます。<br>
+      現在は旧設定値（${settings.initialLeave ?? 10}日）を使用しています。
+    </div>`;
+  } else {
+    const rows=ls.grants.map(g=>{
+      const isPast=g.grantDate<=today;
+      const isExpired=g.expireDate<=today;
+      const statusColor=isExpired?'#ef4444':isPast?'#22c55e':'#94a3b8';
+      const statusLabel=isExpired?'失効済':isPast?'付与済':'付与予定';
+      return`<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f1f5f9">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:${isPast?'#1e293b':'#94a3b8'}">
+            ${g.grantDate} <span style="font-size:10px;color:#94a3b8">（勤続${g.label}）</span>
+          </div>
+          ${isPast?`<div style="font-size:10px;color:#94a3b8;margin-top:2px">失効: ${g.expireDate}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:15px;font-weight:800;color:${isPast?'#6366f1':'#94a3b8'}">${g.days}日</div>
+          <div style="font-size:9px;font-weight:700;color:${statusColor}">${statusLabel}</div>
+        </div>
+      </div>`;
+    });
+    if(ls.nextGrant){
+      rows.push(`<div style="background:#f5f3ff;border-radius:8px;padding:10px 12px;margin-top:8px;border:1px solid #ddd6fe">
+        <div style="font-size:10px;color:#8b5cf6;font-weight:700;margin-bottom:2px">📅 次回付与予定</div>
+        <div style="font-size:13px;font-weight:800;color:#7c3aed">${ls.nextGrant.grantDate}　+${ls.nextGrant.days}日</div>
+        <div style="font-size:10px;color:#a78bfa;margin-top:2px">（勤続${ls.nextGrant.label}時点）</div>
+      </div>`);
+    }
+    gh.innerHTML=rows.join('') || '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">まだ付与されていません</div>';
+  }
+
+  // 使用履歴
+  const leaves=Object.entries(logs).filter(([,v])=>v.type==='paid-full'||v.type==='paid-half').sort((a,b)=>b[0].localeCompare(a[0]));
+  const lh=document.getElementById('leave-history');
+  if(!leaves.length){lh.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">使用履歴なし</div>';}
+  else{
+    let cum=0;
+    lh.innerHTML=leaves.map(([d,v])=>{
+      const t=TYPE[v.type];cum+=t.val;
+      const dt=new Date(d+'T00:00:00');
+      const dows=['日','月','火','水','木','金','土'];
+      return`<div class="row">
+        <div style="font-size:12px;color:#64748b;min-width:100px">${dt.getMonth()+1}/${dt.getDate()}（${dows[dt.getDay()]}）</div>
+        <span class="tag" style="background:${t.bg};color:${t.color};border:1px solid ${t.border}">${t.short}</span>
+        ${v.note?`<span style="font-size:10px;color:#94a3b8">${v.note}</span>`:''}
+        <div style="margin-left:auto;font-size:10px;color:#94a3b8">累計${cum}日</div>
+      </div>`;
+    }).join('');
+  }
+
+  // 月別
+  const monthly={};
+  Object.entries(logs).forEach(([d,v])=>{
+    const ym=d.slice(0,7);
+    if(!monthly[ym])monthly[ym]={paid:0,off:0};
+    if(TYPE[v.type])monthly[ym].paid+=TYPE[v.type].val;
+    if(v.type==='off')monthly[ym].off++;
+  });
+  const ml=document.getElementById('monthly-list');
+  const mons=Object.keys(monthly).sort().reverse();
+  if(!mons.length){ml.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">記録なし</div>';}
+  else{
+    ml.innerHTML=mons.map(ym=>{
+      const r=monthly[ym];const[y,m]=ym.split('-');
+      return`<div class="row">
+        <div style="font-size:13px;font-weight:700;min-width:80px">${parseInt(m)}月 (${y})</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${r.paid>0?`<span class="tag" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a">有休${fmt(r.paid)}日</span>`:''}
+          ${r.off>0?`<span class="tag" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0">休${r.off}日</span>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+/* ── Holiday management ── */
+function toggleHolType(){
+  const t=document.getElementById('hol-type').value;
+  document.getElementById('hol-range-area').style.display=t==='range'?'block':'none';
+  document.getElementById('hol-monthly-day-area').style.display=t==='monthly-day'?'block':'none';
+  document.getElementById('hol-single-area').style.display=t==='single'?'block':'none';
+  document.getElementById('hol-repeat').parentElement.style.display=(t==='monthly-last'||t==='monthly-day')?'none':'block';
+}
+
+function saveHoliday(){
+  const name=document.getElementById('hol-name').value.trim();
+  if(!name)return showToast('休日名を入力してください','err');
+  const type=document.getElementById('hol-type').value;
+  const repeat=document.getElementById('hol-repeat').value;
+  const h={id:Date.now(),name,type,repeat};
+  if(type==='range'){
+    const s=document.getElementById('hol-start').value,e=document.getElementById('hol-end').value;
+    if(!s||!e)return showToast('期間を入力してください','err');
+    h.start=s;h.end=e;
+  } else if(type==='monthly-day'){
+    const n=parseInt(document.getElementById('hol-day-num').value);
+    if(!n||n<1||n>31)return showToast('日を入力してください','err');
+    h.dayNum=n;h.repeat='yearly';
+  } else if(type==='monthly-last'){
+    h.repeat='yearly';
+  } else if(type==='single'){
+    const d=document.getElementById('hol-single-date').value;
+    if(!d)return showToast('日付を入力してください','err');
+    h.date=d;
+  }
+  holidays.push(h);persist();
+  document.getElementById('hol-name').value='';
+  renderCalendar();
+  showToast(`「${name}」を登録しました`,'info');
+  switchSubTab('list',document.getElementById('stab-list'));
+}
+
+function deleteHoliday(id){
+  holidays=holidays.filter(h=>h.id!==id);persist();
+  renderHolidayList();renderCalendar();showToast('削除しました');
+}
+
+function renderHolidayList(){
+  const el=document.getElementById('holiday-list');
+  if(!holidays.length){el.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:20px">登録なし</div>';return;}
+  el.innerHTML=holidays.map(h=>{
+    let desc='';
+    if(h.type==='range')desc=`${h.start}〜${h.end}${h.repeat==='yearly'?' (毎年)':''}`;
+    else if(h.type==='monthly-last')desc='毎月末日';
+    else if(h.type==='monthly-day')desc=`毎月${h.dayNum}日`;
+    else if(h.type==='single')desc=`${h.date}${h.repeat==='yearly'?' (毎年)':''}`;
+    return`<div class="hol-item" style="padding:13px 16px">
+      <div style="flex:1">
+        <div class="hol-name">🏢 ${h.name}</div>
+        <div class="hol-dates">${desc}</div>
+      </div>
+      <button class="hol-del" onclick="deleteHoliday(${h.id})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function applyPreset(type){
+  const y=new Date().getFullYear();
+  const presets={
+    obon:{name:'お盆休み',type:'range',repeat:'yearly',start:`${y}-08-13`,end:`${y}-08-16`},
+    newyear:{name:'年末年始',type:'range',repeat:'yearly',start:`${y}-12-29`,end:`${y+1}-01-03`},
+    monthend:{name:'月末休み',type:'monthly-last',repeat:'yearly'},
+    gw:{name:'GW休暇',type:'range',repeat:'yearly',start:`${y}-05-03`,end:`${y}-05-05`},
+  };
+  const p=presets[type];
+  holidays.push({id:Date.now(),...p});persist();
+  
+  renderCalendar();
+  showToast(`「${p.name}」を登録しました`,'info');
+  switchSubTab('list',document.getElementById('stab-list'));
+}
+
+function switchSubTab(id,btn){
+  document.querySelectorAll('.sub-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('hol-add-panel').style.display=id==='add'?'block':'none';
+  document.getElementById('hol-list-panel').style.display=id==='list'?'block':'none';
+  if(id==='list')renderHolidayList();
+}
+
+/* ── Settings ── */
+function renderPatterns(){
+  const pl=document.getElementById('pattern-list');
+  const s=[...patterns].sort((a,b)=>a.start.localeCompare(b.start));
+  if(!s.length){pl.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">登録なし</div>';return;}
+  pl.innerHTML=s.map(p=>`
+    <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">
+      <div style="flex:1"><div style="font-size:12px;font-weight:600">${p.label}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">${p.start}〜${p.end==='2099-12-31'?'現在':p.end}　${p.s}〜${p.e}</div></div>
+      <button onclick="deletePattern(${p.id})" style="background:transparent;border:1.5px solid #e2e8f0;color:#cbd5e1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">削</button>
+    </div>`).join('');
+}
+function savePattern(){
+  const s=document.getElementById('p-start').value;
+  if(!s)return showToast('開始日を入力してください','err');
+  patterns.push({id:Date.now(),start:s,end:document.getElementById('p-end').value||'2099-12-31',s:document.getElementById('p-s').value,e:document.getElementById('p-e').value,label:document.getElementById('p-label').value||s+'〜'});persist();
+  renderPatterns();
+  document.getElementById('p-label').value='';document.getElementById('p-end').value='';
+  showToast('登録しました');
+}
+function deletePattern(id){patterns=patterns.filter(p=>p.id!==id);persist();renderPatterns();}
+
+function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
+
+function updateSetPreview(){
+  const s=document.getElementById('set-work-s').value;
+  const e=document.getElementById('set-work-e').value;
+  const wd=parseInt(document.getElementById('set-weekly-days').value)||4;
+  if(!s||!e){document.getElementById('set-hours-hint').textContent='';return;}
+  const dayMins=toMin(e)-toMin(s);
+  const weekHours=Math.round(wd*dayMins/60*10)/10;
+  document.getElementById('set-hours-hint').textContent=`1日 ${Math.floor(dayMins/60)}h${dayMins%60?dayMins%60+'m':''}　週 ${weekHours}h`;
+  settings.weeklyHours=weekHours;
+  // preview
+  const fullTime=wd>=5||weekHours>=30;
+  const typeLabel=fullTime?'通常付与（週5日以上 or 週30h以上）':`比例付与（週${wd}日・週${weekHours}h）`;
+  const hire=document.getElementById('set-hire-date').value;
+  let preview=`<div style="font-weight:700;color:#1e293b;margin-bottom:6px">📋 ${typeLabel}</div>`;
+  if(hire){
+    // show first few grants
+    const tmpSettings={hireDate:hire,weeklyDays:wd,weeklyHours:weekHours};
+    const savedSettings=settings;
+    settings=tmpSettings;
+    const gs=calcGrantSchedule().slice(0,4);
+    settings=savedSettings;
+    preview+=gs.map(g=>`<div style="display:flex;justify-content:space-between"><span style="color:#64748b">勤続${g.label}（${g.grantDate}）</span><span style="font-weight:700;color:#6366f1">+${g.days}日</span></div>`).join('');
+    if(gs.length>0)preview+=`<div style="font-size:10px;color:#94a3b8;margin-top:6px">※ 付与から2年で失効（労基法39条）</div>`;
+  } else {
+    preview+=`<div style="color:#94a3b8;font-size:11px">← 入社日を入力すると付与スケジュールが表示されます</div>`;
+  }
+  document.getElementById('set-law-preview').innerHTML=preview;
+}
+
+function saveWorkConditions(){
+  const hire=document.getElementById('set-hire-date').value;
+  if(!hire)return showToast('入社日を入力してください','err');
+  const wd=parseInt(document.getElementById('set-weekly-days').value);
+  const s=document.getElementById('set-work-s').value;
+  const e=document.getElementById('set-work-e').value;
+  const dayMins=toMin(e)-toMin(s);
+  const wh=Math.round(wd*dayMins/60*10)/10;
+  settings.hireDate=hire;
+  settings.weeklyDays=wd;
+  settings.weeklyHours=wh;
+  delete settings.initialLeave;
+  persist();
+  renderCalendar();
+  showToast('勤務条件を保存しました。有休を自動計算しています ✓');
+}
+
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='calendar')renderCalendar();
+  if(id==='summary')renderSummary();
+  if(id==='shift'){
+    renderPatterns();
+    if(settings.hireDate)document.getElementById('set-hire-date').value=settings.hireDate;
+    if(settings.weeklyDays)document.getElementById('set-weekly-days').value=settings.weeklyDays;
+    updateSetPreview();
+  }
+}
+
+function exportData(){
+  const b=new Blob([JSON.stringify({patterns,logs,settings,holidays},null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');
+  a.href=u;a.download=`kintai-${todayStr()}.json`;a.click();
+}
+function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{
+    const d=JSON.parse(ev.target.result);
+    if(d.patterns){patterns=d.patterns;}
+    if(d.logs){logs=d.logs;}
+    if(d.settings){settings=d.settings;}
+    if(d.holidays){holidays=d.holidays;}
+    persist();
+    renderCalendar();showToast('復元しました');
+  }catch{showToast('読み込み失敗','err');}};
+  r.readAsText(f);e.target.value='';
+}
+function resetAll(){
+  if(confirm('全データを初期化しますか？')){
+    localStorage.clear();
+    if(currentUser){
+      db.collection('users').doc(currentUser.uid).collection('kintai').doc('data').delete();
+    }
+    location.reload();
+  }
+}
+
+// Init
+document.getElementById('hdate').textContent=todayStr();
+document.getElementById('p-start').value=todayStr();
+document.getElementById('hol-start').value=todayStr();
+document.getElementById('hol-end').value=todayStr();
+document.getElementById('hol-single-date').value=todayStr();
+// 設定値を復元
+if(settings.hireDate){document.getElementById('set-hire-date').value=settings.hireDate;}
+if(settings.weeklyDays){document.getElementById('set-weekly-days').value=settings.weeklyDays;}
+// ライブプレビューのリスナー
+['set-hire-date','set-weekly-days','set-work-s','set-work-e'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', updateSetPreview);
+});
+renderCalendar();
+</script>
+</body>
+</html>
