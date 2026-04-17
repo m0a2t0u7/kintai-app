@@ -496,9 +496,25 @@ function handleAuth() {
     if (confirm('ログアウトしますか？')) auth.signOut();
   } else {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e => showToast('ログイン失敗: '+e.message,'err'));
+    // モバイルはリダイレクト、PCはポップアップ
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      auth.signInWithRedirect(provider);
+    } else {
+      auth.signInWithPopup(provider).catch(e => {
+        // ポップアップ失敗時はリダイレクトにフォールバック
+        auth.signInWithRedirect(provider);
+      });
+    }
   }
 }
+
+// リダイレクト後の結果を処理
+auth.getRedirectResult().then(result => {
+  if (result && result.user) {
+    showToast('ログインしました ✓', 'info');
+  }
+}).catch(e => console.warn('redirect result error:', e));
 
 auth.onAuthStateChanged(user => {
   currentUser = user;
