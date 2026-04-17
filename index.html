@@ -464,15 +464,20 @@ async function loadFromFirestore() {
       if (d.logs)     logs     = d.logs;
       if (d.settings) settings = d.settings;
       if (d.holidays) holidays = d.holidays;
-      // ローカルにも保存
       localStorage.setItem(MASTER_KEY, JSON.stringify({patterns,logs,settings,holidays}));
-      renderCalendar();
-      if(document.getElementById('panel-summary').classList.contains('active')) renderSummary();
-      if(settings.hireDate) document.getElementById('set-hire-date').value = settings.hireDate;
-      if(settings.weeklyDays) document.getElementById('set-weekly-days').value = settings.weeklyDays;
     }
     setSyncDot('ok');
-  } catch(e) { setSyncDot('offline'); }
+  } catch(e) {
+    console.warn('Firestore load error:', e);
+    setSyncDot('offline');
+  }
+  // データ読み込み後に必ず再描画
+  try { renderCalendar(); } catch(e) { console.warn(e); }
+  try {
+    if(document.getElementById('panel-summary').classList.contains('active')) renderSummary();
+    if(settings.hireDate) document.getElementById('set-hire-date').value = settings.hireDate;
+    if(settings.weeklyDays) document.getElementById('set-weekly-days').value = settings.weeklyDays;
+  } catch(e) { console.warn(e); }
 }
 
 async function syncToFirestore() {
@@ -807,23 +812,27 @@ function renderCalendar(){
 }
 
 function cell(ds,d,inMonth,today){
-  const dow=new Date(ds+'T00:00:00').getDay();
-  const log=logs[ds];
-  const ch=inMonth?isCompanyHoliday(ds):null;
-  const autoOff=inMonth&&isAutoOff(ds);
-  const cls=['cal-day'];
-  if(!inMonth){cls.push('other-month');return`<div class="${cls.join(' ')}"><div class="day-num">${d}</div><div class="day-dot"></div></div>`;}
-  if(ds===today)cls.push('today');
-  if(dow===0)cls.push('sun');
-  if(dow===6)cls.push('sat');
-  if(autoOff)cls.push('auto-off');
-  if(ch)cls.push('s-company');
-  if(log)cls.push('s-'+log.type);
-  let dot='';
-  if(log)dot=TYPE[log.type].dot;
-  else if(ch)dot='🏢';
-  else if(JP_HOLIDAYS.has(ds)&&dow!==0&&dow!==6)dot='🎌'; // 平日祝日のみ旗
-  return`<div class="${cls.join(' ')}" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot">${dot}</div></div>`;
+  try{
+    const dow=new Date(ds+'T00:00:00').getDay();
+    const log=logs[ds];
+    const ch=inMonth?isCompanyHoliday(ds):null;
+    const autoOff=inMonth&&isAutoOff(ds);
+    const cls=['cal-day'];
+    if(!inMonth){cls.push('other-month');return`<div class="${cls.join(' ')}"><div class="day-num">${d}</div><div class="day-dot"></div></div>`;}
+    if(ds===today)cls.push('today');
+    if(dow===0)cls.push('sun');
+    if(dow===6)cls.push('sat');
+    if(autoOff)cls.push('auto-off');
+    if(ch)cls.push('s-company');
+    if(log)cls.push('s-'+log.type);
+    let dot='';
+    if(log)dot=(TYPE[log.type]&&TYPE[log.type].dot)||'';
+    else if(ch)dot='🏢';
+    else if(JP_HOLIDAYS.has(ds)&&dow!==0&&dow!==6)dot='🏌';
+    return`<div class="${cls.join(' ')}" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot">${dot}</div></div>`;
+  }catch(e){
+    return`<div class="cal-day" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot"></div></div>`;
+  }
 }
 
 function changeMonth(dir){
@@ -1178,20 +1187,31 @@ function resetAll(){
   }
 }
 
-// Init
-document.getElementById('hdate').textContent=todayStr();
-document.getElementById('p-start').value=todayStr();
-document.getElementById('hol-start').value=todayStr();
-document.getElementById('hol-end').value=todayStr();
-document.getElementById('hol-single-date').value=todayStr();
-// 設定値を復元
-if(settings.hireDate){document.getElementById('set-hire-date').value=settings.hireDate;}
-if(settings.weeklyDays){document.getElementById('set-weekly-days').value=settings.weeklyDays;}
-// ライブプレビューのリスナー
-['set-hire-date','set-weekly-days','set-work-s','set-work-e'].forEach(id=>{
-  document.getElementById(id).addEventListener('change', updateSetPreview);
-});
-renderCalendar();
+// Init - DOMContentLoaded で確実に実行
+function initApp() {
+  try { document.getElementById('hdate').textContent=todayStr(); } catch(e){}
+  try { document.getElementById('p-start').value=todayStr(); } catch(e){}
+  try { document.getElementById('hol-start').value=todayStr(); } catch(e){}
+  try { document.getElementById('hol-end').value=todayStr(); } catch(e){}
+  try { document.getElementById('hol-single-date').value=todayStr(); } catch(e){}
+  try {
+    if(settings.hireDate) document.getElementById('set-hire-date').value=settings.hireDate;
+    if(settings.weeklyDays) document.getElementById('set-weekly-days').value=settings.weeklyDays;
+  } catch(e){}
+  try {
+    ['set-hire-date','set-weekly-days','set-work-s','set-work-e'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.addEventListener('change', updateSetPreview);
+    });
+  } catch(e){}
+  try { renderCalendar(); } catch(e){ console.warn('renderCalendar error:', e); }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 </script>
 </body>
 </html>
