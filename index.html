@@ -149,7 +149,9 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
 
 <div class="header">
   <div class="header-title">有休・休暇管理</div>
-  <div style="display:flex;align-items:center;gap:8px">
+  <div style="display:flex;align-items:center;gap:6px">
+    <button onclick="loadFromFirestore()" title="クラウドから再読み込み"
+      style="background:#f1f5f9;border:1.5px solid #e2e8f0;color:#64748b;border-radius:8px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
     <span class="sync-dot offline" id="sync-dot"></span>
     <button class="login-btn" id="login-btn" onclick="handleAuth()">
       <span id="login-label">Googleでログイン</span>
@@ -457,7 +459,9 @@ async function loadFromFirestore() {
   if (!currentUser) return;
   try {
     setSyncDot('syncing');
-    const doc = await db.collection('users').doc(currentUser.uid).collection('kintai').doc('data').get();
+    showToast('データを読み込み中...','info');
+    const docRef = db.collection('users').doc(currentUser.uid).collection('kintai').doc('data');
+    const doc = await docRef.get();
     if (doc.exists) {
       const d = doc.data();
       if (d.patterns) patterns = d.patterns;
@@ -465,19 +469,24 @@ async function loadFromFirestore() {
       if (d.settings) settings = d.settings;
       if (d.holidays) holidays = d.holidays;
       localStorage.setItem(MASTER_KEY, JSON.stringify({patterns,logs,settings,holidays}));
+      showToast('クラウドから読み込みました ✓','info');
+    } else {
+      showToast('クラウドにデータなし（初回）','info');
+      // 初回ログイン時はローカルデータをクラウドに保存
+      await syncToFirestore();
     }
     setSyncDot('ok');
   } catch(e) {
     console.warn('Firestore load error:', e);
     setSyncDot('offline');
+    showToast('同期エラー: '+e.code,'err');
   }
-  // データ読み込み後に必ず再描画
   try { renderCalendar(); } catch(e) { console.warn(e); }
   try {
     if(document.getElementById('panel-summary').classList.contains('active')) renderSummary();
     if(settings.hireDate) document.getElementById('set-hire-date').value = settings.hireDate;
     if(settings.weeklyDays) document.getElementById('set-weekly-days').value = settings.weeklyDays;
-  } catch(e) { console.warn(e); }
+  } catch(e) {}
 }
 
 async function syncToFirestore() {
