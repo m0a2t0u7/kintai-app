@@ -139,6 +139,24 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
 .sync-dot.syncing{background:#f59e0b;animation:pulse 1s infinite}
 .sync-dot.offline{background:#94a3b8}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Clear, accessible mobile layout */
+:root{--accent:#4756c8;--ink:#18243b;--muted:#617089}
+body{max-width:760px;background:#f3f5f9;color:var(--ink);font-size:14px;line-height:1.6}
+.header{padding:18px 20px;box-shadow:none;gap:10px}.header-title{font-size:19px;white-space:nowrap}
+.login-btn{max-width:160px;min-height:40px}.login-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{position:sticky;top:77px;z-index:45}.tab-btn{font-size:13px;min-height:52px;color:#617089;font-weight:600}.tab-btn.active{color:var(--accent);border-color:var(--accent)}
+.content{padding:20px 16px 36px}.card{padding:22px;border-radius:18px;box-shadow:none;margin-bottom:16px}.card-title,.lbl{font-size:13px;color:#617089;letter-spacing:.2px;font-weight:600}.lbl{margin-top:12px}
+.fi{min-height:48px;font-size:16px;border-width:1px;border-radius:12px;min-width:0}.btn{min-height:48px;font-size:14px;border-radius:12px}.btn-primary,.pop-save{background:var(--accent)}.btn-green{background:#167966}
+.sum-box{padding:18px 8px;border-radius:16px;box-shadow:none}.sum-label{font-size:12px;color:#617089}.sum-val{font-size:32px;letter-spacing:-1px}.sum-val:after{content:'日';font-size:12px;margin-left:4px;letter-spacing:0}
+.summary-bar .sum-box:first-child{background:#253659;border-color:#253659}.summary-bar .sum-box:first-child .sum-label{color:#c3cde3}.summary-bar .sum-box:first-child .sum-val{color:white!important}
+.legend-item{font-size:11px;padding:4px 8px}.cal-nav{padding:14px}.cal-nav-btn{width:44px;height:44px}.day-num{font-size:16px;width:30px;height:30px}.day-dot{font-size:11px}.cal-day{min-height:56px}.cal-grid{border-radius:18px}.cal-dow span{font-size:12px;padding:12px 0}
+.popup{max-width:560px;padding-bottom:max(24px,env(safe-area-inset-bottom));max-height:90dvh;overflow:auto}.popup-sub{font-size:13px}.pop-btn{font-size:14px;min-height:88px}.pop-clear{min-height:44px;color:#617089}.hol-del{min-height:40px;color:#617089}.toast{max-width:90vw;text-align:center;top:88px;border-radius:12px}
+button:focus-visible,input:focus-visible,select:focus-visible,[role=button]:focus-visible{outline:3px solid #9ba7f4;outline-offset:3px}
+.insight{border:1px solid #dce2ee;background:#fff;border-radius:16px;padding:16px 18px;margin:14px 0}.insight strong{display:block;font-size:14px}.insight p{font-size:13px;color:#617089;margin-top:5px}.eyebrow{color:#617089;font-size:12px;letter-spacing:1px}.intro{margin-bottom:18px}.intro h1{font-size:24px;letter-spacing:-.6px}.intro p{font-size:13px;color:#617089;margin-top:4px}.weekdays{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.weekdays label{background:#f5f7fb;padding:8px 11px;border-radius:8px;font-size:14px}.weekdays input{accent-color:var(--accent)}
+@media(max-width:380px){.header{padding:14px 12px}.header-title{font-size:16px}.login-btn{max-width:120px}.content{padding:16px 12px}.card{padding:16px}.tab-btn{font-size:12px}.tabs{top:69px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -165,7 +183,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
   <button class="tab-btn" onclick="switchTab('shift',this)">⚙️ 設定</button>
 </div>
 
-<div id="toast" class="toast" style="opacity:0"></div>
+<div id="toast" role="status" aria-live="polite" class="toast" style="opacity:0"></div>
 
 <!-- POPUP -->
 <div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
@@ -200,7 +218,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
 <div class="content">
 
   <!-- CALENDAR -->
-  <div id="panel-calendar" class="panel active">
+  <div id="panel-calendar" class="panel active"><div class="intro"><div class="eyebrow">LEAVE PLANNER</div><h1>休みを、見通せる。</h1><p>残りの日数を確認して、カレンダーからかんたん記録。</p></div>
     <div class="summary-bar">
       <div class="sum-box">
         <div class="sum-label">有休残</div>
@@ -217,7 +235,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
     </div>
 
     <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#e2e8f0"></div>土日祝</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e2e8f0"></div>定休日・祝日</div>
       <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>有休（全）</div>
       <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>有休（半）</div>
       <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>欠勤・公休</div>
@@ -233,7 +251,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
       <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
     </div>
 
-    <div class="cal-grid">
+    <button class="btn btn-sec" onclick="goToday()">今日の月へ戻る</button><div id="leave-insight" class="insight"></div><div class="cal-grid">
       <div class="cal-dow">
         <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
       </div>
@@ -367,7 +385,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
     <div class="card" style="background:#f0f9ff;border-color:#bae6fd">
       <div style="font-size:11px;color:#0369a1;line-height:1.8;margin-bottom:2px">
         ⚖️ <strong>労働基準法に基づいて自動計算</strong><br>
-        入社日と週の勤務日数を入力するだけで、有休付与日数・繰越・失効を自動で管理します。
+        法定日数を目安に、付与・繰越・失効を計算します。出勤率8割以上を前提とし、会社独自の付与日や勤務条件の変更は反映しません。
       </div>
     </div>
 
@@ -391,7 +409,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
         <input type="time" class="fi" id="set-work-s" value="09:45" style="margin-bottom:0">
         <input type="time" class="fi" id="set-work-e" value="15:15" style="margin-bottom:0">
       </div>
-      <div id="set-hours-hint" style="font-size:11px;color:#6366f1;margin-bottom:12px;font-weight:600"></div>
+      <label class="lbl">休憩時間（分）</label><input type="number" class="fi" id="set-break" value="0" min="0" max="720"><label class="lbl">定休日（選んだ曜日をカレンダーに表示）</label><div class="weekdays"><label><input type="checkbox" name="off-days" value="0" checked> 日</label><label><input type="checkbox" name="off-days" value="1" > 月</label><label><input type="checkbox" name="off-days" value="2" > 火</label><label><input type="checkbox" name="off-days" value="3" > 水</label><label><input type="checkbox" name="off-days" value="4" > 木</label><label><input type="checkbox" name="off-days" value="5" > 金</label><label><input type="checkbox" name="off-days" value="6" checked> 土</label></div><div id="set-hours-hint" style="font-size:11px;color:#6366f1;margin-bottom:12px;font-weight:600"></div>
 
       <div id="set-law-preview" style="background:#f8fafc;border-radius:10px;padding:12px;border:1px solid #e2e8f0;margin-bottom:12px;font-size:12px;line-height:1.8;color:#475569"></div>
 
@@ -424,7 +442,7 @@ input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.5}
         <div class="btn btn-sec" style="text-align:center;padding:12px;display:block;margin-bottom:0">⬆ バックアップから復元</div>
         <input type="file" accept=".json" onchange="importData(event)" style="display:none">
       </label>
-      <button class="btn btn-danger" onclick="resetAll()">全データ初期化</button>
+      <button class="btn btn-sec" onclick="recoverSafetyBackup()">直前の退避データに戻す</button><p style="font-size:12px;color:#617089;margin:8px 0 16px">復元・削除・初期化の直前に端末内へ自動退避します。端末を変えるときはJSONを保存してください。</p><button class="btn btn-danger" onclick="resetAll()">全データ初期化</button>
     </div>
   </div>
 
@@ -464,6 +482,7 @@ async function loadFromFirestore() {
     const doc = await docRef.get();
     if (doc.exists) {
       const d = doc.data();
+      snapshotData();
       if (d.patterns) patterns = d.patterns;
       if (d.logs)     logs     = d.logs;
       if (d.settings) settings = d.settings;
@@ -481,6 +500,7 @@ async function loadFromFirestore() {
     setSyncDot('offline');
     showToast('同期エラー: '+e.code,'err');
   }
+  restoreConditions();
   try { renderCalendar(); } catch(e) { console.warn(e); }
   try {
     if(document.getElementById('panel-summary').classList.contains('active')) renderSummary();
@@ -613,9 +633,10 @@ function persist() {
   syncTimer = setTimeout(() => syncToFirestore(), 500);
 }
 
-function todayStr(){return new Date().toISOString().slice(0,10);}
+function todayStr(){const d=new Date();return dateStr(d.getFullYear(),d.getMonth()+1,d.getDate());}
 function pad(n){return String(n).padStart(2,'0');}
 function dateStr(y,m,d){return`${y}-${pad(m)}-${pad(d)}`;}
+function escapeHTML(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function fmt(n){return n%1===0?String(n):n.toFixed(1);}
 
 function showToast(msg,type='ok'){
@@ -697,13 +718,12 @@ const JP_HOLIDAYS = new Set([
 
 function isAutoOff(ds) {
   const dow = new Date(ds + 'T00:00:00').getDay();
-  return dow === 0 || dow === 6 || JP_HOLIDAYS.has(ds);
+  return (settings.offDays || [0,6]).includes(dow) || JP_HOLIDAYS.has(ds);
 }
 
 function holidayName(ds) {
   const dow = new Date(ds + 'T00:00:00').getDay();
-  if (dow === 0) return '日曜日';
-  if (dow === 6) return '土曜日';
+  if ((settings.offDays || [0,6]).includes(dow)) return '定休日';
   if (JP_HOLIDAYS.has(ds)) return '祝日';
   return null;
 }
@@ -720,10 +740,11 @@ const LEAVE_TABLE = [
   [78, 20,15, 11, 7, 3],
 ];
 
-function addMonths(dateStr, months) {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString().slice(0,10);
+function addMonths(ds, months) {
+ const [y,m,day]=ds.split('-').map(Number);
+ const d=new Date(y,m-1+months,1);
+ d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));
+ return dateStr(d.getFullYear(),d.getMonth()+1,d.getDate());
 }
 
 function diffMonths(from, to) {
@@ -748,14 +769,14 @@ function calcGrantSchedule() {
   const wh = settings.weeklyHours || 22;
   const grants = [];
 
-  for (let i = 0; i < LEAVE_TABLE.length; i++) {
-    const row = LEAVE_TABLE[i];
+  for (let i = 0; i < Math.max(7, Math.floor(diffMonths(settings.hireDate,today)/12)+3); i++) {
+    const row = i<7 ? LEAVE_TABLE[i] : [78+(i-6)*12,...LEAVE_TABLE[6].slice(1)];
     const grantDate = addMonths(settings.hireDate, row[0]);
     const expireDate = addMonths(grantDate, 24);      // 2年で失効
     const days = getDaysForRow(row, wd, wh);
     const label = row[0] < 12
       ? `${row[0]}ヶ月`
-      : `${row[0]/12}年${row[0]%12?row[0]%12+'ヶ月':''}`;
+      : `${Math.floor(row[0]/12)}年${row[0]%12?row[0]%12+'ヶ月':''}`;
     grants.push({ grantDate, expireDate, days, label, index: i });
     if (grantDate > today && i >= 6) break;  // future max already
     if (grantDate > addMonths(today, 24)) break; // don't look too far ahead
@@ -785,13 +806,20 @@ function calcLeaveStats() {
   const wh = settings.weeklyHours || 22;
   const grants = calcGrantSchedule();
   const pastGrants = grants.filter(g => g.grantDate <= today);
-  const nonExpired = pastGrants.filter(g => g.expireDate > today);
-  let totalGranted = 0;
-  nonExpired.forEach(g => totalGranted += g.days);
-  const remaining = Math.max(0, totalGranted - totalUsed);
-  const nextGrant = grants.find(g => g.grantDate > today);
-
-  return { remaining, totalUsed, totalGranted, grants, nextGrant, offMonth, pastGrants };
+  const balances=pastGrants.map(g=>({...g,left:g.days}));
+  let unallocated=0,planned=0;
+  Object.entries(logs).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([ds,v])=>{
+    let amount=TYPE[v.type]?.val||0;
+    if(ds>today){planned+=amount;return;}
+    for(const g of balances){if(g.grantDate<=ds && ds<g.expireDate){const take=Math.min(g.left,amount);g.left-=take;amount-=take;}}
+    unallocated+=amount;
+  });
+  const active=balances.filter(g=>g.expireDate>today);
+  const totalGranted=active.reduce((n,g)=>n+g.days,0);
+  const remaining=active.reduce((n,g)=>n+g.left,0);
+  const nextGrant=grants.find(g=>g.grantDate>today);
+  const expiring=active.find(g=>g.left>0);
+  return {remaining,totalUsed,totalGranted,grants,nextGrant,offMonth,pastGrants,planned,expiring,unallocated};
 }
 
 /* ── Stats ── */
@@ -834,6 +862,8 @@ function renderCalendar(){
   }
   document.getElementById('cal-days').innerHTML=html;
   updateSummaryBar();
+  const st=calcLeaveStats();
+  document.getElementById('leave-insight').innerHTML='<strong>次回付与 '+(st.nextGrant?st.nextGrant.grantDate+' ／ +'+st.nextGrant.days+'日':'入社日を設定してください')+'</strong><p>'+(st.expiring?'失効予定 '+st.expiring.expireDate+' ／ 残り'+fmt(st.expiring.left)+'日':'失効予定の有休はありません')+(st.planned?' ・ 予約済み '+fmt(st.planned)+'日':'')+'</p>'+(st.unallocated?'<p>付与前・残日数を超える取得記録があります。会社の記録と確認してください。</p>':'');
 }
 
 function cell(ds,d,inMonth,today){
@@ -854,12 +884,13 @@ function cell(ds,d,inMonth,today){
     if(log)dot=(TYPE[log.type]&&TYPE[log.type].dot)||'';
     else if(ch)dot='🏢';
     else if(JP_HOLIDAYS.has(ds)&&dow!==0&&dow!==6)dot='🏌';
-    return`<div class="${cls.join(' ')}" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot">${dot}</div></div>`;
+    return`<div class="${cls.join(' ')}" role="button" tabindex="0" aria-label="${ds}の休暇を記録" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPopup('${ds}')}" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot">${dot}</div></div>`;
   }catch(e){
-    return`<div class="cal-day" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot"></div></div>`;
+    return`<div class="cal-day" role="button" tabindex="0" aria-label="${ds}の休暇を記録" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPopup('${ds}')}" onclick="openPopup('${ds}')"><div class="day-num">${d}</div><div class="day-dot"></div></div>`;
   }
 }
 
+function goToday(){const d=new Date();curYear=d.getFullYear();curMonth=d.getMonth()+1;renderCalendar();}
 function changeMonth(dir){
   curMonth+=dir;
   if(curMonth>12){curMonth=1;curYear++;}
@@ -910,7 +941,8 @@ function saveDay(){
   renderCalendar();showToast('保存しました ✓');
 }
 function clearDay(){
-  delete logs[popDate];persist();
+  if(!confirm('この日の記録を削除しますか？'))return;
+  snapshotData();delete logs[popDate];persist();
   document.getElementById('popup-overlay').classList.remove('show');
   renderCalendar();showToast('削除しました');
 }
@@ -982,7 +1014,7 @@ function renderSummary(){
       return`<div class="row">
         <div style="font-size:12px;color:#64748b;min-width:100px">${dt.getMonth()+1}/${dt.getDate()}（${dows[dt.getDay()]}）</div>
         <span class="tag" style="background:${t.bg};color:${t.color};border:1px solid ${t.border}">${t.short}</span>
-        ${v.note?`<span style="font-size:10px;color:#94a3b8">${v.note}</span>`:''}
+        ${v.note?`<span style="font-size:10px;color:#94a3b8">${escapeHTML(v.note)}</span>`:''}
         <div style="margin-left:auto;font-size:10px;color:#94a3b8">累計${cum}日</div>
       </div>`;
     }).join('');
@@ -1019,7 +1051,7 @@ function toggleHolType(){
   document.getElementById('hol-range-area').style.display=t==='range'?'block':'none';
   document.getElementById('hol-monthly-day-area').style.display=t==='monthly-day'?'block':'none';
   document.getElementById('hol-single-area').style.display=t==='single'?'block':'none';
-  document.getElementById('hol-repeat').parentElement.style.display=(t==='monthly-last'||t==='monthly-day')?'none':'block';
+  document.getElementById('hol-repeat').style.display=(t==='monthly-last'||t==='monthly-day')?'none':'block';
 }
 
 function saveHoliday(){
@@ -1031,6 +1063,7 @@ function saveHoliday(){
   if(type==='range'){
     const s=document.getElementById('hol-start').value,e=document.getElementById('hol-end').value;
     if(!s||!e)return showToast('期間を入力してください','err');
+    if(e<s)return showToast('終了日は開始日以降にしてください','err');
     h.start=s;h.end=e;
   } else if(type==='monthly-day'){
     const n=parseInt(document.getElementById('hol-day-num').value);
@@ -1051,7 +1084,8 @@ function saveHoliday(){
 }
 
 function deleteHoliday(id){
-  holidays=holidays.filter(h=>h.id!==id);persist();
+  if(!confirm('この会社休日を削除しますか？'))return;
+  snapshotData();holidays=holidays.filter(h=>h.id!==id);persist();
   renderHolidayList();renderCalendar();showToast('削除しました');
 }
 
@@ -1066,7 +1100,7 @@ function renderHolidayList(){
     else if(h.type==='single')desc=`${h.date}${h.repeat==='yearly'?' (毎年)':''}`;
     return`<div class="hol-item" style="padding:13px 16px">
       <div style="flex:1">
-        <div class="hol-name">🏢 ${h.name}</div>
+        <div class="hol-name">🏢 ${escapeHTML(h.name)}</div>
         <div class="hol-dates">${desc}</div>
       </div>
       <button class="hol-del" onclick="deleteHoliday(${h.id})">削除</button>
@@ -1105,7 +1139,7 @@ function renderPatterns(){
   if(!s.length){pl.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">登録なし</div>';return;}
   pl.innerHTML=s.map(p=>`
     <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">
-      <div style="flex:1"><div style="font-size:12px;font-weight:600">${p.label}</div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:600">${escapeHTML(p.label)}</div>
       <div style="font-size:10px;color:#94a3b8;margin-top:2px">${p.start}〜${p.end==='2099-12-31'?'現在':p.end}　${p.s}〜${p.e}</div></div>
       <button onclick="deletePattern(${p.id})" style="background:transparent;border:1.5px solid #e2e8f0;color:#cbd5e1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">削</button>
     </div>`).join('');
@@ -1113,12 +1147,13 @@ function renderPatterns(){
 function savePattern(){
   const s=document.getElementById('p-start').value;
   if(!s)return showToast('開始日を入力してください','err');
+  if((document.getElementById('p-end').value||'2099-12-31')<s||toMin(document.getElementById('p-e').value)<=toMin(document.getElementById('p-s').value))return showToast('期間と勤務時間を確認してください','err');
   patterns.push({id:Date.now(),start:s,end:document.getElementById('p-end').value||'2099-12-31',s:document.getElementById('p-s').value,e:document.getElementById('p-e').value,label:document.getElementById('p-label').value||s+'〜'});persist();
   renderPatterns();
   document.getElementById('p-label').value='';document.getElementById('p-end').value='';
   showToast('登録しました');
 }
-function deletePattern(id){patterns=patterns.filter(p=>p.id!==id);persist();renderPatterns();}
+function deletePattern(id){if(!confirm('この勤務パターンを削除しますか？'))return;snapshotData();patterns=patterns.filter(p=>p.id!==id);persist();renderPatterns();}
 
 function toMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;}
 
@@ -1127,10 +1162,11 @@ function updateSetPreview(){
   const e=document.getElementById('set-work-e').value;
   const wd=parseInt(document.getElementById('set-weekly-days').value)||4;
   if(!s||!e){document.getElementById('set-hours-hint').textContent='';return;}
-  const dayMins=toMin(e)-toMin(s);
+  const dayMins=toMin(e)-toMin(s)-(Number(document.getElementById("set-break").value)||0);
+  if(dayMins<=0){document.getElementById("set-hours-hint").textContent="終了時間と休憩を確認してください";return;}
   const weekHours=Math.round(wd*dayMins/60*10)/10;
   document.getElementById('set-hours-hint').textContent=`1日 ${Math.floor(dayMins/60)}h${dayMins%60?dayMins%60+'m':''}　週 ${weekHours}h`;
-  settings.weeklyHours=weekHours;
+  // Preview does not mutate saved settings.
   // preview
   const fullTime=wd>=5||weekHours>=30;
   const typeLabel=fullTime?'通常付与（週5日以上 or 週30h以上）':`比例付与（週${wd}日・週${weekHours}h）`;
@@ -1157,8 +1193,11 @@ function saveWorkConditions(){
   const wd=parseInt(document.getElementById('set-weekly-days').value);
   const s=document.getElementById('set-work-s').value;
   const e=document.getElementById('set-work-e').value;
-  const dayMins=toMin(e)-toMin(s);
+  const dayMins=toMin(e)-toMin(s)-(Number(document.getElementById("set-break").value)||0);
   const wh=Math.round(wd*dayMins/60*10)/10;
+  if(!s||!e||dayMins<=0)return showToast("勤務時間と休憩を確認してください","err");
+  settings.workStart=s;settings.workEnd=e;settings.breakMinutes=Number(document.getElementById("set-break").value)||0;
+  settings.offDays=Array.from(document.querySelectorAll("[name=off-days]:checked"),el=>Number(el.value));
   settings.hireDate=hire;
   settings.weeklyDays=wd;
   settings.weeklyHours=wh;
@@ -1179,41 +1218,59 @@ function switchTab(id,btn){
     renderPatterns();
     if(settings.hireDate)document.getElementById('set-hire-date').value=settings.hireDate;
     if(settings.weeklyDays)document.getElementById('set-weekly-days').value=settings.weeklyDays;
-    updateSetPreview();
+    restoreConditions();updateSetPreview();
   }
 }
 
+function restoreConditions(){
+ document.getElementById('set-work-s').value=settings.workStart||'09:45';
+ document.getElementById('set-work-e').value=settings.workEnd||'15:15';
+ document.getElementById('set-break').value=settings.breakMinutes||0;
+ document.querySelectorAll('[name=off-days]').forEach(el=>el.checked=(settings.offDays||[0,6]).includes(Number(el.value)));
+}
+function snapshotData(){
+ const raw=localStorage.getItem(MASTER_KEY);
+ if(raw)localStorage.setItem('kintai_safety_backup',raw);
+}
 function exportData(){
-  const b=new Blob([JSON.stringify({patterns,logs,settings,holidays},null,2)],{type:'application/json'});
-  const u=URL.createObjectURL(b);const a=document.createElement('a');
-  a.href=u;a.download=`kintai-${todayStr()}.json`;a.click();
+ const b=new Blob([JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),patterns,logs,settings,holidays},null,2)],{type:'application/json'});
+ const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=`kintai-${todayStr()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);showToast('バックアップをダウンロードしました');
+}
+function validBackup(d){
+ const obj=v=>v&&typeof v==='object'&&!Array.isArray(v);
+ const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!isNaN(Date.parse(v));
+ const time=v=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+ return obj(d)&&Array.isArray(d.patterns)&&Array.isArray(d.holidays)&&obj(d.logs)&&obj(d.settings)&&
+ d.patterns.every(p=>obj(p)&&Number.isFinite(p.id)&&date(p.start)&&date(p.end)&&time(p.s)&&time(p.e)&&typeof p.label==='string')&&
+ Object.entries(d.logs).every(([ds,v])=>date(ds)&&obj(v)&&Object.hasOwn(TYPE,v.type)&&(v.note===undefined||typeof v.note==='string'))&&
+ d.holidays.every(h=>obj(h)&&Number.isFinite(h.id)&&typeof h.name==='string'&&['range','single','monthly-last','monthly-day'].includes(h.type)&&(h.type!=='range'||(date(h.start)&&date(h.end)))&&(h.type!=='single'||date(h.date))&&(h.type!=='monthly-day'||(Number.isInteger(h.dayNum)&&h.dayNum>=1&&h.dayNum<=31)))&&
+ (!d.settings.hireDate||date(d.settings.hireDate))&&(!d.settings.offDays||(Array.isArray(d.settings.offDays)&&d.settings.offDays.every(n=>Number.isInteger(n)&&n>=0&&n<=6)));
 }
 function importData(e){
-  const f=e.target.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=ev=>{try{
-    const d=JSON.parse(ev.target.result);
-    if(d.patterns){patterns=d.patterns;}
-    if(d.logs){logs=d.logs;}
-    if(d.settings){settings=d.settings;}
-    if(d.holidays){holidays=d.holidays;}
-    persist();
-    renderCalendar();showToast('復元しました');
-  }catch{showToast('読み込み失敗','err');}};
-  r.readAsText(f);e.target.value='';
+ const f=e.target.files[0];e.target.value='';if(!f)return;
+ if(f.size>5000000)return showToast('ファイルが大きすぎます','err');
+ const r=new FileReader();r.onload=ev=>{try{
+ const d=JSON.parse(ev.target.result);if(!validBackup(d))throw Error();
+ if(!confirm('現在の記録をバックアップの内容で置き換えます。続けますか？'))return;
+ snapshotData();patterns=d.patterns;logs=d.logs;settings=d.settings;holidays=d.holidays;persist();restoreConditions();renderCalendar();renderPatterns();renderSummary();showToast('復元しました');
+ }catch{showToast('正しいバックアップJSONを選んでください','err');}};r.readAsText(f);
+}
+function recoverSafetyBackup(){
+ const raw=localStorage.getItem('kintai_safety_backup');if(!raw)return showToast('退避データはありません','err');
+ try{const d=JSON.parse(raw);if(!validBackup(d))throw Error();if(!confirm('直前に退避した記録へ戻しますか？'))return;
+ snapshotData();patterns=d.patterns;logs=d.logs;settings=d.settings;holidays=d.holidays;persist();restoreConditions();renderCalendar();renderPatterns();showToast('退避データを復元しました');}catch{showToast('退避データを読み込めません','err');}
 }
 function resetAll(){
-  if(confirm('全データを初期化しますか？')){
-    localStorage.clear();
-    if(currentUser){
-      db.collection('users').doc(currentUser.uid).collection('kintai').doc('data').delete();
-    }
-    location.reload();
-  }
+ if(confirm('このアプリの全記録を初期化しますか？直前の記録は端末内に退避します。')){
+ snapshotData();patterns=[];logs={};settings={};holidays=[];persist();restoreConditions();renderCalendar();renderPatterns();showToast('初期化しました');
+ }
 }
 
 // Init - DOMContentLoaded で確実に実行
 function initApp() {
+  if(!localStorage.getItem('kintai_upgrade_backup_20261005')){const raw=localStorage.getItem(MASTER_KEY);if(raw)localStorage.setItem('kintai_upgrade_backup_20261005',raw);}
+  document.querySelectorAll('label.lbl').forEach(label=>{const next=label.nextElementSibling;if(next&&['INPUT','SELECT'].includes(next.tagName))label.htmlFor=next.id;});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closePopup();});
   try { document.getElementById('hdate').textContent=todayStr(); } catch(e){}
   try { document.getElementById('p-start').value=todayStr(); } catch(e){}
   try { document.getElementById('hol-start').value=todayStr(); } catch(e){}
@@ -1224,11 +1281,12 @@ function initApp() {
     if(settings.weeklyDays) document.getElementById('set-weekly-days').value=settings.weeklyDays;
   } catch(e){}
   try {
-    ['set-hire-date','set-weekly-days','set-work-s','set-work-e'].forEach(id=>{
+    ['set-hire-date','set-weekly-days','set-work-s','set-work-e','set-break'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.addEventListener('change', updateSetPreview);
     });
   } catch(e){}
+  restoreConditions();
   try { renderCalendar(); } catch(e){ console.warn('renderCalendar error:', e); }
 }
 
@@ -1240,3 +1298,4 @@ if (document.readyState === 'loading') {
 </script>
 </body>
 </html>
+
