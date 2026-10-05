@@ -789,7 +789,7 @@ function calcLeaveStats() {
 
   // 使用済み（常に計算）
   let totalUsed = 0;
-  Object.values(logs).forEach(v => { if(TYPE[v.type]) totalUsed += TYPE[v.type].val; });
+  Object.entries(logs).forEach(([ds,v]) => { if(ds<=today && TYPE[v.type]) totalUsed += TYPE[v.type].val; });
 
   // 今月の手動記録休み
   const cm = `${curYear}-${pad(curMonth)}`;
@@ -1014,7 +1014,7 @@ function renderSummary(){
       return`<div class="row">
         <div style="font-size:12px;color:#64748b;min-width:100px">${dt.getMonth()+1}/${dt.getDate()}（${dows[dt.getDay()]}）</div>
         <span class="tag" style="background:${t.bg};color:${t.color};border:1px solid ${t.border}">${t.short}</span>
-        ${v.note?`<span style="font-size:10px;color:#94a3b8">${escapeHTML(v.note)}</span>`:''}
+        ${d>today?'<span class="tag" style="color:#4756c8;background:#eef1ff">予約</span>':''}${v.note?`<span style="font-size:10px;color:#94a3b8">${escapeHTML(v.note)}</span>`:''}
         <div style="margin-left:auto;font-size:10px;color:#94a3b8">累計${cum}日</div>
       </div>`;
     }).join('');
