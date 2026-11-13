@@ -157,6 +157,39 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role=button]:focu
 @media(max-width:380px){.header{padding:14px 12px}.header-title{font-size:16px}.login-btn{max-width:120px}.content{padding:16px 12px}.card{padding:16px}.tab-btn{font-size:12px}.tabs{top:69px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+
+/* Compact calendar and annual overview */
+.header{padding:6px 12px;min-height:52px;gap:6px}
+.header-title{font-size:17px}
+.tabs{top:52px}
+.tab-btn{min-height:44px;padding:6px 2px;font-size:12px}
+.content{padding:10px 10px 24px}
+.summary-bar{gap:6px;margin-bottom:6px}
+.sum-box{padding:7px 3px;border-radius:10px}
+.sum-label{margin-bottom:0;letter-spacing:0}
+.sum-val{font-size:24px;line-height:1.3;font-variant-numeric:tabular-nums}
+.legend{gap:5px 9px;margin:7px 0}
+.legend-item{background:none;border:0;padding:0;font-size:10px;gap:3px}
+.cal-nav{padding:0 4px;margin-bottom:5px;border-radius:10px}
+.cal-nav-btn,.cal-today{width:44px;height:44px;border:0;background:transparent;color:var(--accent);cursor:pointer}
+.cal-today{font:inherit;font-size:12px;font-weight:700}
+.cal-grid{border-radius:12px}
+.cal-dow span{padding:4px 0}
+.cal-day{aspect-ratio:auto;min-height:44px}
+.day-num{font-size:15px;width:25px;height:25px}
+.day-dot{font-size:10px;line-height:1.2}
+.insight{display:flex;flex-wrap:wrap;gap:3px 12px;margin:6px 0;padding:7px 9px;border-radius:10px;font-size:11px;color:var(--muted)}
+.insight[hidden]{display:none}
+.year-card,.summary-details{padding:10px 12px;margin-bottom:6px;border-radius:12px}
+.year-heading{display:flex;align-items:center;justify-content:space-between;font-weight:700;margin-bottom:6px}
+.year-heading select{min-height:44px;border:1px solid #dce2ee;border-radius:8px;background:white;color:var(--ink);font:inherit;font-size:16px;padding:4px 8px}
+.year-metrics,.months{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.year-metrics{margin-bottom:7px}
+.year-metrics .sum-box:nth-child(2){background:#253659;color:white}
+.year-metrics .sum-box:nth-child(2) .sum-label{color:#dbe4f7}
+.month-stat{display:grid;grid-template-columns:1fr auto;gap:0 3px;align-content:start;padding:5px 6px;background:#f3f5f9;border-radius:6px;font-size:12px;font-variant-numeric:tabular-nums}
+.month-stat small{grid-column:1/-1;color:var(--muted)}
+.summary-details summary{min-height:28px;line-height:28px;font-weight:700;cursor:pointer}
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -218,18 +251,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role=button]:focu
 <div class="content">
 
   <!-- CALENDAR -->
-  <div id="panel-calendar" class="panel active"><div class="intro"><div class="eyebrow">LEAVE PLANNER</div><h1>休みを、見通せる。</h1><p>残りの日数を確認して、カレンダーからかんたん記録。</p></div>
+  <div id="panel-calendar" class="panel active">
     <div class="summary-bar">
       <div class="sum-box">
         <div class="sum-label">有休残</div>
         <div class="sum-val" id="s-remaining" style="color:#8b5cf6">—</div>
       </div>
       <div class="sum-box">
-        <div class="sum-label">使用済み</div>
+        <div class="sum-label" id="s-used-label">年内使用</div>
         <div class="sum-val" id="s-used" style="color:#f59e0b">—</div>
       </div>
       <div class="sum-box">
-        <div class="sum-label">今月の休み</div>
+        <div class="sum-label">表示月の休み</div>
         <div class="sum-val" id="s-off" style="color:#94a3b8">—</div>
       </div>
     </div>
@@ -243,61 +276,43 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role=button]:focu
     </div>
 
     <div class="cal-nav">
-      <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <button class="cal-nav-btn" aria-label="前月" onclick="changeMonth(-1)">‹</button>
       <div style="text-align:center">
         <span class="cal-month" id="cal-month-label"></span>
         <span class="cal-year" id="cal-year-label"></span>
+        <button class="cal-today" onclick="goToday()">今月</button>
       </div>
-      <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+      <button class="cal-nav-btn" aria-label="翌月" onclick="changeMonth(1)">›</button>
     </div>
 
-    <button class="btn btn-sec" onclick="goToday()">今日の月へ戻る</button><div id="leave-insight" class="insight"></div><div class="cal-grid">
+    <div class="cal-grid">
       <div class="cal-dow">
         <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
       </div>
       <div class="cal-days" id="cal-days"></div>
     </div>
 
-    <div style="font-size:10px;color:#94a3b8;margin-top:8px;text-align:center">タップして記録 ／ 🏢会社休日もカレンダーからタップで入力できます</div>
+    <div id="leave-insight" class="insight"></div>
   </div>
 
   <!-- SUMMARY -->
   <div id="panel-summary" class="panel">
-    <div class="card">
-      <div class="card-title">有休サマリー</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:16px;border:1px solid #ddd6fe;text-align:center">
-          <div style="font-size:9px;color:#8b5cf6;letter-spacing:2px;margin-bottom:6px">有休残日数</div>
-          <div id="ss-remaining" style="font-size:36px;font-weight:900;color:#7c3aed">—</div>
-          <div style="font-size:11px;color:#a78bfa;margin-top:4px">/ <span id="ss-total">—</span> 日付与</div>
-        </div>
-        <div style="background:linear-gradient(135deg,#fffbeb,#fef9c3);border-radius:12px;padding:16px;border:1px solid #fde68a;text-align:center">
-          <div style="font-size:9px;color:#d97706;letter-spacing:2px;margin-bottom:6px">使用合計</div>
-          <div id="ss-used" style="font-size:36px;font-weight:900;color:#b45309">—</div>
-          <div style="font-size:11px;color:#f59e0b;margin-top:4px">日（半休×0.5）</div>
-        </div>
+    <div class="card year-card">
+      <div class="year-heading">
+        <label for="summary-year">年別集計</label>
+        <select id="summary-year" onchange="renderSummary()"></select>
       </div>
-      <div style="background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden">
-        <div id="ss-bar" style="height:8px;border-radius:6px;transition:width .5s"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:#94a3b8">
-        <span>残 <span id="ss-r2">—</span>日</span><span>付与 <span id="ss-t2">—</span>日</span>
-      </div>
+      <div id="year-metrics" class="year-metrics"></div>
+      <div id="monthly-list" class="months"></div>
     </div>
-
-    <div class="card">
-      <div class="card-title">付与履歴・繰越状況</div>
-      <div id="grant-history"></div>
-    </div>
-
-    <div class="card">
+    <details class="card summary-details">
+      <summary>有休の記録</summary>
       <div id="leave-history"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">月別 集計</div>
-      <div id="monthly-list"></div>
-    </div>
+    </details>
+    <details class="card summary-details">
+      <summary>付与履歴・繰越</summary>
+      <div id="grant-history"></div>
+    </details>
   </div>
 
   <!-- COMPANY HOLIDAYS -->
@@ -784,8 +799,7 @@ function calcGrantSchedule() {
   return grants;
 }
 
-function calcLeaveStats() {
-  const today = todayStr();
+function calcLeaveStats(today = todayStr()) {
 
   // 使用済み（常に計算）
   let totalUsed = 0;
@@ -823,18 +837,28 @@ function calcLeaveStats() {
 }
 
 /* ── Stats ── */
-function calcStats(){
-  const s = calcLeaveStats();
-  return { remaining: s.remaining, used: s.totalUsed, offMonth: s.offMonth };
+function annualLeave(year, today) {
+  const months = Array.from({length: 12}, () => ({used: 0, planned: 0, off: 0}));
+  for (const [date, entry] of Object.entries(logs)) {
+    if (!date.startsWith(year + '-')) continue;
+    const month = months[Number(date.slice(5, 7)) - 1];
+    if (!month) continue;
+    const days = TYPE[entry.type]?.val || 0;
+    month[date <= today ? 'used' : 'planned'] += days;
+    if (entry.type === 'off') month.off++;
+  }
+  return {
+    months,
+    used: months.reduce((sum, month) => sum + month.used, 0),
+    planned: months.reduce((sum, month) => sum + month.planned, 0)
+  };
 }
 
-function updateSummaryBar(){
-  const s=calcStats();
-  const lc=s.remaining<=2?'#ef4444':s.remaining<=5?'#f59e0b':'#8b5cf6';
-  document.getElementById('s-remaining').textContent=fmt(s.remaining);
-  document.getElementById('s-remaining').style.color=lc;
-  document.getElementById('s-used').textContent=fmt(s.used);
-  document.getElementById('s-off').textContent=s.offMonth;
+function updateSummaryBar(stats, today){
+  document.getElementById('s-remaining').textContent = fmt(stats.remaining);
+  document.getElementById('s-used-label').textContent = curYear + '年使用';
+  document.getElementById('s-used').textContent = fmt(annualLeave(curYear, today).used);
+  document.getElementById('s-off').textContent = stats.offMonth;
 }
 
 /* ── Calendar ── */
@@ -861,9 +885,16 @@ function renderCalendar(){
     html+=cell(dateStr(ny,nm,i),i,false,today);
   }
   document.getElementById('cal-days').innerHTML=html;
-  updateSummaryBar();
-  const st=calcLeaveStats();
-  document.getElementById('leave-insight').innerHTML='<strong>次回付与 '+(st.nextGrant?st.nextGrant.grantDate+' ／ +'+st.nextGrant.days+'日':'入社日を設定してください')+'</strong><p>'+(st.expiring?'失効予定 '+st.expiring.expireDate+' ／ 残り'+fmt(st.expiring.left)+'日':'失効予定の有休はありません')+(st.planned?' ・ 予約済み '+fmt(st.planned)+'日':'')+'</p>'+(st.unallocated?'<p>付与前・残日数を超える取得記録があります。会社の記録と確認してください。</p>':'');
+  const st=calcLeaveStats(today);
+  updateSummaryBar(st, today);
+  const notes = [];
+  if (st.nextGrant) notes.push('次回付与 ' + st.nextGrant.grantDate + ' +' + st.nextGrant.days + '日');
+  if (st.expiring) notes.push('失効予定 ' + st.expiring.expireDate + ' ' + fmt(st.expiring.left) + '日');
+  if (st.planned) notes.push('予約 ' + fmt(st.planned) + '日');
+  if (st.unallocated) notes.push('残日数に割り当てられない取得 ' + fmt(st.unallocated) + '日');
+  const insight = document.getElementById('leave-insight');
+  insight.replaceChildren(...notes.map(note => Object.assign(document.createElement('span'), {textContent: note})));
+  insight.hidden = !notes.length;
 }
 
 function cell(ds,d,inMonth,today){
@@ -949,24 +980,36 @@ function clearDay(){
 
 /* ── Summary ── */
 function renderSummary(){
-  const ls = calcLeaveStats();
-  const lc = ls.remaining<=2?'#ef4444':ls.remaining<=5?'#f59e0b':'#7c3aed';
-  document.getElementById('ss-remaining').textContent=fmt(ls.remaining);
-  document.getElementById('ss-remaining').style.color=lc;
-  document.getElementById('ss-total').textContent=ls.totalGranted;
-  document.getElementById('ss-used').textContent=fmt(ls.totalUsed);
-  document.getElementById('ss-r2').textContent=fmt(ls.remaining);
-  document.getElementById('ss-t2').textContent=ls.totalGranted;
-  const ratio=ls.totalGranted>0?Math.max(0,Math.min(100,(ls.remaining/ls.totalGranted)*100)):0;
-  document.getElementById('ss-bar').style.cssText=`width:${ratio}%;height:8px;border-radius:6px;transition:width .5s;background:${ls.remaining<=2?'linear-gradient(90deg,#ef4444,#f97316)':ls.remaining<=5?'linear-gradient(90deg,#f59e0b,#eab308)':'linear-gradient(90deg,#8b5cf6,#6366f1)'}`;
+  const today = todayStr();
+  const currentYear = Number(today.slice(0, 4));
+  const ls = calcLeaveStats(today);
+  const select = document.getElementById('summary-year');
+  const years = [...new Set([currentYear, ...Object.keys(logs).map(date => Number(date.slice(0, 4))),
+    ...ls.pastGrants.map(grant => Number(grant.grantDate.slice(0, 4)))])]
+    .filter(Number.isInteger).sort((a, b) => b - a);
+  const selectedYear = Number(select.value);
+  const year = years.includes(selectedYear) ? selectedYear : currentYear;
+  select.replaceChildren(...years.map(value => new Option(value + '年', value)));
+  select.value = year;
 
-  // 次回付与バナー
-  const d1=document.getElementById('ss-total');
-  d1.textContent=ls.totalGranted+'日（付与済合計）';
+  const annual = annualLeave(year, today);
+  const balance = year < currentYear ? calcLeaveStats(year + '-12-31').remaining : ls.remaining;
+  const metrics = [
+    ['使用', fmt(annual.used)],
+    [year < currentYear ? '年末残' : '現在残', fmt(balance)],
+    ['予約', fmt(annual.planned)]
+  ];
+  document.getElementById('year-metrics').innerHTML = metrics.map(([label, value]) =>
+    '<div class="sum-box"><div class="sum-label">' + label + '</div><div class="sum-val">' + value + '</div></div>'
+  ).join('');
+  document.getElementById('monthly-list').innerHTML = annual.months.map((month, index) =>
+    '<div class="month-stat"><span>' + (index + 1) + '月</span><strong>' + fmt(month.used) + '日</strong>' +
+    (month.planned ? '<small>予約 ' + fmt(month.planned) + '日</small>' : '') +
+    (month.off ? '<small>欠勤・公休 ' + month.off + '日</small>' : '') + '</div>'
+  ).join('');
 
   // 付与履歴
   const gh=document.getElementById('grant-history');
-  const today=todayStr();
   if(!settings.hireDate){
     gh.innerHTML=`<div style="background:#fffbeb;border-radius:8px;padding:12px;border:1px solid #fde68a;font-size:12px;color:#92400e;line-height:1.6">
       ⚙️ <strong>⚙️設定タブ</strong>で入社日を入力すると、労基法に基づいた付与日数が自動計算されます。<br>
@@ -1002,47 +1045,23 @@ function renderSummary(){
   }
 
   // 使用履歴
-  const leaves=Object.entries(logs).filter(([,v])=>v.type==='paid-full'||v.type==='paid-half').sort((a,b)=>b[0].localeCompare(a[0]));
+  const leaves=Object.entries(logs).filter(([date,v])=>date.startsWith(year + '-') && (v.type==='paid-full'||v.type==='paid-half')).sort((a,b)=>b[0].localeCompare(a[0]));
   const lh=document.getElementById('leave-history');
   if(!leaves.length){lh.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">使用履歴なし</div>';}
   else{
-    let cum=0;
     lh.innerHTML=leaves.map(([d,v])=>{
-      const t=TYPE[v.type];cum+=t.val;
+      const t=TYPE[v.type];
       const dt=new Date(d+'T00:00:00');
       const dows=['日','月','火','水','木','金','土'];
       return`<div class="row">
         <div style="font-size:12px;color:#64748b;min-width:100px">${dt.getMonth()+1}/${dt.getDate()}（${dows[dt.getDay()]}）</div>
         <span class="tag" style="background:${t.bg};color:${t.color};border:1px solid ${t.border}">${t.short}</span>
         ${d>today?'<span class="tag" style="color:#4756c8;background:#eef1ff">予約</span>':''}${v.note?`<span style="font-size:10px;color:#94a3b8">${escapeHTML(v.note)}</span>`:''}
-        <div style="margin-left:auto;font-size:10px;color:#94a3b8">累計${cum}日</div>
       </div>`;
     }).join('');
   }
 
-  // 月別
-  const monthly={};
-  Object.entries(logs).forEach(([d,v])=>{
-    const ym=d.slice(0,7);
-    if(!monthly[ym])monthly[ym]={paid:0,off:0};
-    if(TYPE[v.type])monthly[ym].paid+=TYPE[v.type].val;
-    if(v.type==='off')monthly[ym].off++;
-  });
-  const ml=document.getElementById('monthly-list');
-  const mons=Object.keys(monthly).sort().reverse();
-  if(!mons.length){ml.innerHTML='<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">記録なし</div>';}
-  else{
-    ml.innerHTML=mons.map(ym=>{
-      const r=monthly[ym];const[y,m]=ym.split('-');
-      return`<div class="row">
-        <div style="font-size:13px;font-weight:700;min-width:80px">${parseInt(m)}月 (${y})</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${r.paid>0?`<span class="tag" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a">有休${fmt(r.paid)}日</span>`:''}
-          ${r.off>0?`<span class="tag" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0">休${r.off}日</span>`:''}
-        </div>
-      </div>`;
-    }).join('');
-  }
+
 }
 
 /* ── Holiday management ── */
